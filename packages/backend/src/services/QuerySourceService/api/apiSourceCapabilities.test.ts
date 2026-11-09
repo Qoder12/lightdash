@@ -37,11 +37,53 @@ const SOURCES = [
         fields: { dimension: 'country', other: 'device', metric: 'clicks' },
     },
     {
+        apiSource: {
+            connector: ApiConnectorType.YOUTUBE_ANALYTICS,
+            channelId: 'UCaaaaaaaaaaaaaaaaaaaaaa',
+        },
+        fields: {
+            dimension: 'country',
+            other: 'video_id',
+            metric: 'views',
+        },
+    },
+    {
+        apiSource: {
+            connector: ApiConnectorType.LINKEDIN_ADS,
+            adAccountId: '507404993',
+        },
+        fields: {
+            dimension: 'campaign_id',
+            other: 'campaign_group_id',
+            metric: 'impressions',
+        },
+    },
+    {
         apiSource: { connector: ApiConnectorType.POSTHOG, projectId: '42' },
         fields: {
             dimension: 'event',
             other: 'browser',
             metric: 'event_count',
+        },
+    },
+    {
+        apiSource: { connector: ApiConnectorType.META_ADS, adAccountId: '123' },
+        fields: {
+            dimension: 'campaign_name',
+            other: 'adset_name',
+            metric: 'spend',
+        },
+    },
+    {
+        apiSource: {
+            connector: ApiConnectorType.GOOGLE_ADS,
+            customerId: '1234567890',
+            loginCustomerId: null,
+        },
+        fields: {
+            dimension: 'account_name',
+            other: 'account_currency',
+            metric: 'clicks',
         },
     },
 ] as const;
