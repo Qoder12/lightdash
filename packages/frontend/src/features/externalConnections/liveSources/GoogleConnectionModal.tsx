@@ -14,6 +14,7 @@ import {
     type GoogleConnector,
 } from './googleConnection';
 import { getApiSourceTarget } from './liveSourceCatalog';
+import { LiveSourceHintField } from './LiveSourceHintField';
 import { SourceIdField } from './SourceIdField';
 
 type Props = {
@@ -33,7 +34,10 @@ export const GoogleConnectionModal: FC<Props> = ({
 }) => {
     const source = getGoogleSource(connector);
     const form = useForm({
-        initialValues: { name: connection?.name ?? source.defaultName },
+        initialValues: {
+            name: connection?.name ?? source.defaultName,
+            aiHint: connection?.aiHint ?? '',
+        },
         validate: {
             name: (value) =>
                 value.trim().length === 0 ? 'Name is required' : null,
@@ -63,7 +67,7 @@ export const GoogleConnectionModal: FC<Props> = ({
         );
     };
 
-    const handleSave = form.onSubmit(async ({ name }) => {
+    const handleSave = form.onSubmit(async ({ name, aiHint }) => {
         if (!connection) {
             if (sourceId.isBlocked) return;
             signIn(null);
@@ -72,7 +76,7 @@ export const GoogleConnectionModal: FC<Props> = ({
         await updateMutation.mutateAsync({
             projectUuid,
             connectionUuid: connection.externalConnectionUuid,
-            data: { name: name.trim() },
+            data: { name: name.trim(), aiHint },
         });
         onClose();
     });
@@ -106,6 +110,9 @@ export const GoogleConnectionModal: FC<Props> = ({
                     {...form.getInputProps('name')}
                 />
                 <SourceIdField connection={connection} sourceId={sourceId} />
+                {connection && (
+                    <LiveSourceHintField {...form.getInputProps('aiHint')} />
+                )}
                 {connection?.apiSource && (
                     <Group justify="space-between" wrap="nowrap">
                         <Text fz="sm" c="dimmed" truncate>
