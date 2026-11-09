@@ -163,6 +163,10 @@ const buildService = ({
                     oauthClientId: undefined,
                     oauthClientSecret: undefined,
                 },
+                linkedinAds: {
+                    oauthClientId: undefined,
+                    oauthClientSecret: undefined,
+                },
             },
             auth: {
                 google: {

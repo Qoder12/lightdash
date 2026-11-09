@@ -15,6 +15,8 @@ import salesforceIcon from './icons/salesforce.svg';
 import shopifyIcon from './icons/shopify.svg';
 import stripeIcon from './icons/stripe.svg';
 import youtubeAnalyticsIcon from './icons/youtube-analytics.svg';
+import { META_ADS_TOKEN_FORM } from './metaAdsConnection';
+import { type TokenLiveSourceForm } from './tokenLiveSource';
 
 type LiveSourceCatalogBase = {
     /** Stable id, sent with analytics events. */
@@ -26,7 +28,11 @@ type LiveSourceCatalogBase = {
 };
 
 /** How an admin connects a source, which decides the dialog it opens. */
-export type LiveSourceSetup = { kind: 'google' } | { kind: 'posthog' };
+export type LiveSourceSetup =
+    | { kind: 'google' }
+    | { kind: 'posthog' }
+    | { kind: 'token'; form: TokenLiveSourceForm }
+    | { kind: 'linkedin_ads' };
 
 type AvailableLiveSourceFields<C extends ApiConnectorType> = {
     connector: C;
@@ -98,34 +104,42 @@ export const LIVE_SOURCE_CATALOG: LiveSourceCatalogEntry[] = [
         setup: { kind: 'google' },
         inOnboarding: true,
     }),
-    {
-        id: 'google_ads',
-        status: 'requestable',
-        label: 'Google Ads',
-        description: 'Campaign spend, clicks and conversions',
-        icon: googleAdsIcon,
-    },
-    {
+    available({
         id: 'meta_ads',
-        status: 'requestable',
+        connector: ApiConnectorType.META_ADS,
         label: 'Meta Ads',
         description: 'Facebook and Instagram ad performance',
         icon: metaAdsIcon,
-    },
-    {
+        getTarget: ({ adAccountId }) => `Ad account ${adAccountId}`,
+        setup: { kind: 'token', form: META_ADS_TOKEN_FORM },
+    }),
+    available({
+        id: 'google_ads',
+        connector: ApiConnectorType.GOOGLE_ADS,
+        label: 'Google Ads',
+        description: 'Campaign spend, clicks and conversions',
+        icon: googleAdsIcon,
+        getTarget: ({ customerId }) => `Account ${customerId}`,
+        setup: { kind: 'google' },
+    }),
+    available({
         id: 'linkedin_ads',
-        status: 'requestable',
+        connector: ApiConnectorType.LINKEDIN_ADS,
         label: 'LinkedIn Ads',
         description: 'Campaign reach, clicks and leads',
         icon: linkedinAdsIcon,
-    },
-    {
+        getTarget: ({ adAccountId }) => `Ad account ${adAccountId}`,
+        setup: { kind: 'linkedin_ads' },
+    }),
+    available({
         id: 'youtube_analytics',
-        status: 'requestable',
+        connector: ApiConnectorType.YOUTUBE_ANALYTICS,
         label: 'YouTube Analytics',
         description: 'Channel views, watch time and subscribers',
         icon: youtubeAnalyticsIcon,
-    },
+        getTarget: ({ channelId }) => `Channel ${channelId}`,
+        setup: { kind: 'google' },
+    }),
     {
         id: 'shopify',
         status: 'requestable',

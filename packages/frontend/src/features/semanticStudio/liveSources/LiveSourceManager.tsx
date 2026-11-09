@@ -4,7 +4,7 @@
  * live here once, and sign-in callbacks (?connected=, ?signInError=,
  * ?pickGoogleSource=) and ?add=true land here, on whichever page they open.
  */
-import { assertUnreachable, type ApiConnectorType } from '@lightdash/common';
+import { ApiConnectorType, assertUnreachable } from '@lightdash/common';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type FC, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
@@ -19,6 +19,8 @@ import {
 } from '../../externalConnections/liveSources/googleConnection';
 import { GoogleConnectionModal } from '../../externalConnections/liveSources/GoogleConnectionModal';
 import { GoogleSourcePickerModal } from '../../externalConnections/liveSources/GoogleSourcePickerModal';
+import { getLinkedInAdsSignInUrl } from '../../externalConnections/liveSources/linkedInAdsConnection';
+import { LinkedInAdsConnectionModal } from '../../externalConnections/liveSources/LinkedInAdsConnectionModal';
 import {
     formatChartCount,
     getLiveSource,
@@ -29,6 +31,7 @@ import {
 } from '../../externalConnections/liveSources/postHogConnection';
 import { PostHogConnectionModal } from '../../externalConnections/liveSources/PostHogConnectionModal';
 import { SourceConnectedModal } from '../../externalConnections/liveSources/SourceConnectedModal';
+import { TokenLiveSourceModal } from '../../externalConnections/liveSources/TokenLiveSourceModal';
 import { useLiveSourceSignInResult } from '../../externalConnections/liveSources/useLiveSourceSignInResult';
 import {
     LiveSourceActionsContext,
@@ -112,6 +115,7 @@ export const LiveSourceManager: FC<{
     const { data: health } = useHealth();
     const canSignIn = health?.hasPostHogOAuth ?? false;
     const canUseGoogle = health?.hasGoogleLiveSources ?? false;
+    const canUseLinkedInAds = health?.hasLinkedInAdsOAuth ?? false;
 
     const actions = useMemo(
         (): LiveSourceActions => ({
@@ -150,12 +154,35 @@ export const LiveSourceManager: FC<{
                                       ),
                                   )
                             : null;
+                    // A token is edited from the source's own form
+                    case 'token':
+                        return null;
+                    case 'linkedin_ads': {
+                        const { apiSource } = connection;
+                        return canUseLinkedInAds &&
+                            apiSource.connector ===
+                                ApiConnectorType.LINKEDIN_ADS
+                            ? () =>
+                                  window.location.assign(
+                                      getLinkedInAdsSignInUrl(
+                                          projectUuid,
+                                          {
+                                              name: connection.name,
+                                              adAccountId:
+                                                  apiSource.adAccountId,
+                                          },
+                                          connection.externalConnectionUuid,
+                                          'settings',
+                                      ),
+                                  )
+                            : null;
+                    }
                     default:
                         return assertUnreachable(setup, 'Unknown source setup');
                 }
             },
         }),
-        [projectUuid, canSignIn, canUseGoogle],
+        [projectUuid, canSignIn, canUseGoogle, canUseLinkedInAds],
     );
 
     if (!enabled) return <>{children}</>;
@@ -169,6 +196,7 @@ export const LiveSourceManager: FC<{
                 close={close}
                 canSignIn={canSignIn}
                 canUseGoogle={canUseGoogle}
+                canUseLinkedInAds={canUseLinkedInAds}
                 onRemoved={onRemoved}
             />
         </LiveSourceActionsContext.Provider>
@@ -213,6 +241,26 @@ const LiveSourceConnectDialog: FC<{
                     onCreated={onCreated}
                 />
             );
+        case 'token':
+            return (
+                <TokenLiveSourceModal
+                    form={setup.form}
+                    opened
+                    onClose={onClose}
+                    projectUuid={projectUuid}
+                    connection={connection}
+                    onCreated={onCreated}
+                />
+            );
+        case 'linkedin_ads':
+            return (
+                <LinkedInAdsConnectionModal
+                    opened
+                    onClose={onClose}
+                    projectUuid={projectUuid}
+                    connection={connection}
+                />
+            );
         default:
             return assertUnreachable(setup, 'Unknown source setup');
     }
@@ -225,6 +273,7 @@ const LiveSourceDialogs: FC<{
     close: () => void;
     canSignIn: boolean;
     canUseGoogle: boolean;
+    canUseLinkedInAds: boolean;
     onRemoved: () => void;
 }> = ({
     projectUuid,
@@ -233,6 +282,7 @@ const LiveSourceDialogs: FC<{
     close,
     canSignIn,
     canUseGoogle,
+    canUseLinkedInAds,
     onRemoved,
 }) => {
     const { isPickingGoogleSource, closeGoogleSourcePicker } =
@@ -266,6 +316,7 @@ const LiveSourceDialogs: FC<{
                 onClose={close}
                 projectUuid={projectUuid}
                 canUseGoogle={canUseGoogle}
+                canUseLinkedInAds={canUseLinkedInAds}
                 onPick={(picked) =>
                     setDialog({ kind: 'create', connector: picked })
                 }

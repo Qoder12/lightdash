@@ -138,6 +138,10 @@ const buildService = ({
                     oauthClientId: clientId ?? undefined,
                     oauthClientSecret: undefined,
                 },
+                linkedinAds: {
+                    oauthClientId: undefined,
+                    oauthClientSecret: undefined,
+                },
             },
         },
     } as never);
