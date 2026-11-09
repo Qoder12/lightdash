@@ -11,6 +11,7 @@ import {
     getErrorMessage,
     getItemId,
     isJwtUser,
+    LIVE_SOURCE_AI_HINT_MAX_LENGTH,
     MissingConfigError,
     NotFoundError,
     ParameterError,
@@ -63,6 +64,7 @@ import type {
 } from '../../../services/QuerySourceService/api/ApiConnector';
 import {
     buildApiSourceExplores,
+    describeApiSourceTarget,
     getApiSourceDefinitionHashes,
     getApiSourceExploreName,
     getApiSourceExploreNames,
@@ -788,6 +790,17 @@ export class ExternalConnectionService extends BaseService {
                 'A live data source cannot drop its integration settings',
             );
         }
+        if (data.aiHint !== undefined && !isLiveSource) {
+            throw new ParameterError('Only live data sources have an AI hint');
+        }
+        const aiHint =
+            data.aiHint?.trim() ||
+            (data.aiHint === undefined ? undefined : null);
+        if ((aiHint?.length ?? 0) > LIVE_SOURCE_AI_HINT_MAX_LENGTH) {
+            throw new ParameterError(
+                `The AI hint can be at most ${LIVE_SOURCE_AI_HINT_MAX_LENGTH} characters`,
+            );
+        }
         if (data.type !== undefined && data.type !== existing.type) {
             ExternalConnectionService.assertNotSignInType(data.type);
         }
@@ -817,6 +830,7 @@ export class ExternalConnectionService extends BaseService {
             account.user.id,
             {
                 ...data,
+                aiHint,
                 apiKeyName: resolved.apiKeyName,
                 apiKeyLocation: resolved.apiKeyLocation,
                 oauthScopes: resolved.oauthScopes,
@@ -850,8 +864,38 @@ export class ExternalConnectionService extends BaseService {
         ) {
             await this.scheduleApiSourceSchemaScan(account, updated);
         }
-        await this.syncApiSourceExploresAfterChange(account, updated, 'throw');
+        const { aiHint: _aiHint, ...settings } = data;
+        const changesOnlyHint =
+            data.aiHint !== undefined &&
+            Object.entries(settings).every(
+                ([key, value]) =>
+                    value === undefined ||
+                    isEqual(value, existing[key as keyof ExternalConnection]),
+            );
+        if (changesOnlyHint && updated.apiSource) {
+            await this.rebuildAfterHintChange(updated, updated.apiSource);
+        } else {
+            await this.syncApiSourceExploresAfterChange(
+                account,
+                updated,
+                'throw',
+            );
+        }
         return updated;
+    }
+
+    /** A hint needs no scan. It reaches the prompt either way, so a failed rebuild only logs. */
+    private async rebuildAfterHintChange(
+        connection: ExternalConnection,
+        apiSource: ExternalConnectionApiSource,
+    ): Promise<void> {
+        try {
+            await this.rebuildApiSourceExplores(connection, apiSource);
+        } catch (error) {
+            this.logger.error(
+                `Failed to rebuild live data source ${connection.externalConnectionUuid} after a hint change: ${getErrorMessage(error)}`,
+            );
+        }
     }
 
     async delete(
@@ -1264,6 +1308,14 @@ export class ExternalConnectionService extends BaseService {
                     apiSource,
                     scannedFields,
                     edits,
+                    aiHint: [
+                        describeApiSourceTarget(
+                            apiSource,
+                            connection.origin,
+                            state.targetLabel,
+                        ),
+                        ...(state.aiHint ? [state.aiHint] : []),
+                    ],
                 });
                 if (keepFields) {
                     const lost = getLostApiSourceFieldIds({
@@ -1582,6 +1634,12 @@ export class ExternalConnectionService extends BaseService {
             await this.externalConnectionModel.initLiveSourceFieldEdits(
                 externalConnectionUuid,
                 deletedTwin.fieldEdits,
+            );
+        }
+        if (tookOverTwin) {
+            await this.externalConnectionModel.restoreLiveSourceDetails(
+                externalConnectionUuid,
+                deletedTwin,
             );
         }
         return { sourceName, deletedTwin: tookOverTwin ? deletedTwin : null };
@@ -2188,11 +2246,13 @@ export class ExternalConnectionService extends BaseService {
             organizationUuid,
             connectionUuid,
             config,
+            targetLabel,
         }: {
             projectUuid: string;
             organizationUuid: string;
             connectionUuid: string | null;
             config: CreateExternalConnection;
+            targetLabel?: string;
         },
     ): Promise<ExternalConnection> {
         validateExternalConnectionConfig(config, true);
@@ -2219,6 +2279,12 @@ export class ExternalConnectionService extends BaseService {
                     ...ExternalConnectionService.kindProperties(updated),
                 },
             });
+            if (targetLabel) {
+                await this.externalConnectionModel.saveLiveSourceTargetLabel(
+                    existing.externalConnectionUuid,
+                    targetLabel,
+                );
+            }
             await this.scheduleApiSourceSchemaScan(account, updated);
             await this.syncApiSourceExploresAfterChange(
                 account,
@@ -2245,6 +2311,12 @@ export class ExternalConnectionService extends BaseService {
                 authType: connection.type,
             },
         });
+        if (targetLabel) {
+            await this.externalConnectionModel.saveLiveSourceTargetLabel(
+                connection.externalConnectionUuid,
+                targetLabel,
+            );
+        }
         await this.scheduleApiSourceSchemaScan(account, connection);
         await this.syncApiSourceExploresAfterChange(
             account,
@@ -2438,6 +2510,8 @@ export class ExternalConnectionService extends BaseService {
                     name: session.name,
                     tokens,
                     choice: current,
+                    targetLabel: choices.find(({ value }) => value === current)
+                        ?.label,
                     connectionUuid: existing.externalConnectionUuid,
                 }),
             };
@@ -2456,6 +2530,7 @@ export class ExternalConnectionService extends BaseService {
                     name: session.name,
                     tokens,
                     choice: choices[0].value,
+                    targetLabel: choices[0].label,
                     connectionUuid: null,
                 }),
             };
@@ -2528,6 +2603,8 @@ export class ExternalConnectionService extends BaseService {
             name: pending.name,
             tokens,
             choice,
+            targetLabel: pending.choices.find(({ value }) => value === choice)
+                ?.label,
             connectionUuid: null,
         });
     }
@@ -2541,6 +2618,7 @@ export class ExternalConnectionService extends BaseService {
             name: string;
             tokens: StoredOAuthTokens;
             choice: string;
+            targetLabel: string | undefined;
             connectionUuid: string | null;
         },
     ): Promise<ExternalConnection> {
