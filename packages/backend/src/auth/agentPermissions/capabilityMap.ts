@@ -864,6 +864,9 @@ export const REST_OPERATION_CAPABILITIES = {
     'ExploreController.SetExplores': [AgentCapability.DeployUpload],
     'ExploreController.ValidateFormula': [AgentCapability.Query],
     'ExploreController.getChartsByExploreName': [AgentCapability.ReadDiscover],
+    'ExternalConnectionController.checkLiveSourceExplorePrefix': [
+        AgentCapability.Administration,
+    ],
     'ExternalConnectionController.createExternalConnection': [
         AgentCapability.Administration,
     ],
@@ -905,7 +908,13 @@ export const REST_OPERATION_CAPABILITIES = {
     'ExternalConnectionController.listExternalConnections': [
         AgentCapability.ReadDiscover,
     ],
+    'ExternalConnectionController.listLiveSourceReattachCandidates': [
+        AgentCapability.Administration,
+    ],
     'ExternalConnectionController.proposeExternalConnectionConfig': [
+        AgentCapability.Administration,
+    ],
+    'ExternalConnectionController.reattachLiveSource': [
         AgentCapability.Administration,
     ],
     'ExternalConnectionController.refreshExternalConnectionExplores': [
