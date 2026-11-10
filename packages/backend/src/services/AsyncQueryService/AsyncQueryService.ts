@@ -213,6 +213,7 @@ import {
     type WarehouseSqlBuilder,
 } from '@lightdash/common';
 import {
+    AnalyticsQueryError,
     DuckdbWarehouseClient,
     mapFieldTypeFromDuckdbTypeName,
     warehouseSqlBuilderFromType,
@@ -268,6 +269,7 @@ import {
     validateMetricQueryFields,
 } from '../../queryCompiler';
 import type { SchedulerClient } from '../../scheduler/SchedulerClient';
+import { markAlreadyReported } from '../../sentry/aiAgentErrors';
 import { traceSpan, type TraceSpan } from '../../tracing/tracing';
 import { wrapSentryTransaction } from '../../utils';
 import { isAiServiceAccountPermissionError } from '../../utils/aiServiceAccountErrors';
@@ -422,6 +424,7 @@ import {
     querySurfaceFromConnectionSurface,
 } from '../WarehouseClientFactory/ConnectionContext';
 import { WarehouseClientFactory } from '../WarehouseClientFactory/WarehouseClientFactory';
+import { captureAiAgentQueryError } from './captureAiAgentQueryError';
 import { discoverColumns } from './columnDiscovery';
 import { type ComposeEngineClient } from './ComposeEngineClient';
 import {
@@ -1793,17 +1796,6 @@ export class AsyncQueryService extends ProjectService {
             );
         }
 
-        const { enabled: isEndpointEnabled } = await this.featureFlagModel.get({
-            user: {
-                userUuid: account.user.id,
-                organizationUuid,
-            },
-            featureFlagId: FeatureFlags.QueryHistory,
-        });
-        if (!isEndpointEnabled) {
-            throw new ForbiddenError('Query history is not enabled');
-        }
-
         const auditedAbility = this.createAuditedAbility(account);
         if (
             auditedAbility.cannot(
@@ -2102,6 +2094,7 @@ export class AsyncQueryService extends ProjectService {
                         dashboardUuid,
                         { projectUuid },
                     );
+                    let canEditDashboard = false;
                     if (isJwtUser(fresh)) {
                         await this.getJwtDashboardQueryContext(
                             fresh,
@@ -2118,32 +2111,36 @@ export class AsyncQueryService extends ProjectService {
                                     spaceUuid: dashboard.spaceUuid,
                                 },
                             );
-                        if (
-                            this.createAuditedAbility(fresh).cannot(
-                                'view',
-                                subject('Dashboard', {
-                                    organizationUuid:
-                                        dashboard.organizationUuid,
-                                    projectUuid,
-                                    inheritsFromOrgOrProject:
-                                        access.inheritsFromOrgOrProject,
-                                    access: access.access,
-                                    metadata: { dashboardUuid: dashboard.uuid },
-                                }),
-                            )
-                        )
+                        const dashboardSubject = subject('Dashboard', {
+                            organizationUuid: dashboard.organizationUuid,
+                            projectUuid,
+                            inheritsFromOrgOrProject:
+                                access.inheritsFromOrgOrProject,
+                            access: access.access,
+                            metadata: { dashboardUuid: dashboard.uuid },
+                        });
+                        const ability = this.createAuditedAbility(fresh);
+                        if (ability.cannot('view', dashboardSubject))
                             throw new ForbiddenError(
                                 "You don't have access to this dashboard",
                             );
+                        canEditDashboard =
+                            reader.kind === 'person' &&
+                            ability.can('update', dashboardSubject);
                     }
-                    if (
-                        tileUuid &&
-                        !dashboard.tiles.some((tile) => tile.uuid === tileUuid)
-                    )
+                    const tileIsPersisted =
+                        !tileUuid ||
+                        dashboard.tiles.some((tile) => tile.uuid === tileUuid);
+                    // Unsaved editor tiles exist only client-side; a save that removed the tile postdates the result.
+                    const isStagedEditorTile =
+                        !tileIsPersisted &&
+                        canEditDashboard &&
+                        node.createdAt >= dashboard.updatedAt;
+                    if (!tileIsPersisted && !isStagedEditorTile)
                         throw new ForbiddenError(
                             'The source dashboard tile is no longer available',
                         );
-                    checkedContent.add(key);
+                    if (tileIsPersisted) checkedContent.add(key);
                 }
             }
             const nodeKind = getQueryResultNodeKind(parameters);
@@ -5774,12 +5771,15 @@ export class AsyncQueryService extends ProjectService {
                         e instanceof WarehouseQueryTimeoutError
                             ? e.data
                             : undefined,
-                    // Surface every queryTag (chart_uuid, dashboard_uuid,
-                    // saved_sql_uuid, scheduler_uuid, scheduler_name, job_id,
-                    // explore_name, query_context, …) onto the error log so a
-                    // single Cloud Logging filter maps a warehouse failure
-                    // back to the originating chart / scheduled sync.
-                    ...queryTags,
+                    // Keep user attribute tags out of Analytics error logs.
+                    ...(e instanceof AnalyticsQueryError
+                        ? {
+                              storageStatus: e.storageStatus ?? undefined,
+                              query_context: queryTags.query_context,
+                              chart_uuid: queryTags.chart_uuid,
+                              dashboard_uuid: queryTags.dashboard_uuid,
+                          }
+                        : queryTags),
                 },
             );
 
@@ -5793,6 +5793,13 @@ export class AsyncQueryService extends ProjectService {
                 throw e;
             }
 
+            if (!(e instanceof AiAccessRefusedError)) {
+                captureAiAgentQueryError({
+                    error: e,
+                    queryTags,
+                    querySource: 'warehouse',
+                });
+            }
             await this.markAsyncQueryErrored({
                 inheritedFromProjectUuid:
                     inheritedFromProjectUuid ??
@@ -11231,11 +11238,14 @@ export class AsyncQueryService extends ProjectService {
                             e,
                         )}`,
                     );
-                    throw new ParameterError(
+                    const error = new ParameterError(
                         `${
                             label ?? `Referenced query "${tableName}"`
                         } did not complete: ${getErrorMessage(e)}`,
                     );
+                    error.cause = e;
+                    // The referenced query's own failure is the one to report
+                    throw markAlreadyReported(error);
                 }
             }),
         );
@@ -11981,6 +11991,11 @@ export class AsyncQueryService extends ProjectService {
                     this.logger.warn(
                         `Python query ${queryUuid} failed: ${message}`,
                     );
+                    captureAiAgentQueryError({
+                        error: e,
+                        queryTags,
+                        querySource: 'python',
+                    });
                     await this.queryHistoryModel.updateStatusToError(
                         queryUuid,
                         projectUuid,
@@ -14157,6 +14172,11 @@ export class AsyncQueryService extends ProjectService {
                 );
                 return;
             }
+            captureAiAgentQueryError({
+                error: e,
+                queryTags,
+                querySource: 'duckdb',
+            });
             await this.queryHistoryModel.update(
                 queryUuid,
                 projectUuid,
@@ -14677,7 +14697,9 @@ export class AsyncQueryService extends ProjectService {
         } catch (e) {
             // The DuckDB client throws raw errors (validation + engine)
             if (e instanceof LightdashError) throw e;
-            throw new WarehouseQueryError(getErrorMessage(e));
+            const error = new WarehouseQueryError(getErrorMessage(e));
+            error.cause = e;
+            throw error;
         }
         return Object.values(
             Object.fromEntries(columns.map((column) => [column.name, column])),

@@ -49,6 +49,8 @@ import { LinearAppInstallationsModel } from './LinearAppInstallations/LinearAppI
 import { ManagedSignInModel } from './ManagedSignInModel';
 import { McpContextModel } from './McpContextModel';
 import { MigrationModel } from './MigrationModel/MigrationModel';
+import { MobileAppLinkModel } from './MobileAppLinkModel';
+import { MobileSignInCodeModel } from './MobileSignInCodeModel';
 import { NotificationsModel } from './NotificationsModel/NotificationsModel';
 import { OAuth2Model } from './OAuth2Model';
 import { OnboardingModel } from './OnboardingModel/OnboardingModel';
@@ -200,7 +202,9 @@ export type ModelManifest = {
     organizationAgentIdentitySettingsModel: OrganizationAgentIdentitySettingsModel;
     userWarehouseCredentialsModel: UserWarehouseCredentialsModel;
     warehouseAvailableTablesModel: WarehouseAvailableTablesModel;
+    mobileAppLinkModel: MobileAppLinkModel;
     warehouseConnectCodeModel: WarehouseConnectCodeModel;
+    mobileSignInCodeModel: MobileSignInCodeModel;
     aiUsageLedgerModel: AiUsageLedgerModel;
     warehouseConnectionModel: WarehouseConnectionModel;
     warehouseConnectionSwitchModel: WarehouseConnectionSwitchModel;
@@ -236,6 +240,7 @@ export type ModelManifest = {
     aiAgentMemoryModel: unknown;
     aiAgentModel: unknown;
     homepageRecommendedActionSkipsModel: unknown;
+    projectModelDocumentModel: unknown;
     projectHomepageModel: unknown;
     aiAgentDocumentModel: unknown;
     aiThreadFileModel: unknown;
@@ -1125,10 +1130,24 @@ export class ModelRepository
         );
     }
 
+    public getMobileAppLinkModel(): MobileAppLinkModel {
+        return this.getModel(
+            'mobileAppLinkModel',
+            () => new MobileAppLinkModel({ database: this.database }),
+        );
+    }
+
     public getWarehouseConnectCodeModel(): WarehouseConnectCodeModel {
         return this.getModel(
             'warehouseConnectCodeModel',
             () => new WarehouseConnectCodeModel({ database: this.database }),
+        );
+    }
+
+    public getMobileSignInCodeModel(): MobileSignInCodeModel {
+        return this.getModel(
+            'mobileSignInCodeModel',
+            () => new MobileSignInCodeModel({ database: this.database }),
         );
     }
 
@@ -1271,6 +1290,10 @@ export class ModelRepository
 
     public getHomepageRecommendedActionSkipsModel<ModelImplT>(): ModelImplT {
         return this.getModel('homepageRecommendedActionSkipsModel');
+    }
+
+    public getProjectModelDocumentModel<ModelImplT>(): ModelImplT {
+        return this.getModel('projectModelDocumentModel');
     }
 
     public getMcpToolCallModel<ModelImplT>(): ModelImplT {

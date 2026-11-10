@@ -55,6 +55,7 @@ import { ManagedAgentService } from '../services/ManagedAgentService/ManagedAgen
 import { type MobilePushNotificationService } from '../services/MobilePushNotificationService/MobilePushNotificationService';
 import { ProjectContextService } from '../services/ProjectContextService/ProjectContextService';
 import type { ProjectHomepageService } from '../services/ProjectHomepageService';
+import { type SemanticStudioService } from '../services/SemanticStudioService/SemanticStudioService';
 import { createReviewJiraIssue } from './tasks/createReviewJiraIssue';
 import { createReviewLinearIssue } from './tasks/createReviewLinearIssue';
 import { scanApiSourceSchema } from './tasks/scanApiSourceSchema';
@@ -67,7 +68,6 @@ export const AI_DEEP_RESEARCH_REPORT_CLEANUP_BATCH_SIZE = 100;
 const AI_AGENT_EVAL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const AI_AGENT_REVIEW_REMEDIATION_RUN_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const DATA_APP_INVESTIGATE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
-const APP_CAPTURE_THUMBNAIL_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
 const AI_AGENT_REVIEW_CLASSIFIER_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
 const AI_AGENT_REVIEW_WRITEBACK_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const AI_AGENT_MEMORY_LLM_TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes
@@ -131,6 +131,7 @@ type CommercialSchedulerWorkerArguments = SchedulerWorkerArguments & {
         'reconcileContent' | 'syncContent'
     >;
     aiAgentService: AiAgentService;
+    semanticStudioService: SemanticStudioService;
     dataAppAnalysisService: DataAppAnalysisService;
     aiAgentMemoryService: AiAgentMemoryService;
     aiWritebackService: AiWritebackService;
@@ -183,6 +184,8 @@ export class CommercialSchedulerWorker extends SchedulerWorker {
     protected readonly analyticsProjectService: CommercialSchedulerWorkerArguments['analyticsProjectService'];
 
     protected readonly aiAgentService: AiAgentService;
+
+    protected readonly semanticStudioService: SemanticStudioService;
 
     protected readonly dataAppAnalysisService: DataAppAnalysisService;
 
@@ -254,6 +257,7 @@ export class CommercialSchedulerWorker extends SchedulerWorker {
         super(args);
         this.analyticsProjectService = args.analyticsProjectService;
         this.aiAgentService = args.aiAgentService;
+        this.semanticStudioService = args.semanticStudioService;
         this.dataAppAnalysisService = args.dataAppAnalysisService;
         this.aiAgentMemoryService = args.aiAgentMemoryService;
         this.aiWritebackService = args.aiWritebackService;
@@ -812,6 +816,11 @@ export class CommercialSchedulerWorker extends SchedulerWorker {
                     },
                 );
             },
+            [EE_SCHEDULER_TASKS.CHECK_SEMANTIC_LAYER_DRAFT_IMPACT]: async (
+                payload,
+            ) => {
+                await this.semanticStudioService.checkDraftImpact(payload);
+            },
             [EE_SCHEDULER_TASKS.EMBED_ARTIFACT_VERSION]: async (
                 payload,
                 _helpers,
@@ -975,13 +984,13 @@ export class CommercialSchedulerWorker extends SchedulerWorker {
                     );
                 }
 
-                const aiAutopilotEnabled =
-                    await this.managedAgentService.isAiAutopilotEnabledForProject(
+                const autopilotAvailable =
+                    await this.managedAgentService.isAutopilotAvailableForProject(
                         settings,
                     );
-                if (!aiAutopilotEnabled) {
+                if (!autopilotAvailable) {
                     Logger.info(
-                        `AI autopilot feature flag disabled for project ${projectUuid}, skipping managed agent heartbeat`,
+                        `AI is not enabled for the organization of project ${projectUuid}, skipping managed agent heartbeat`,
                     );
                     return;
                 }
@@ -1102,29 +1111,11 @@ export class CommercialSchedulerWorker extends SchedulerWorker {
                     },
                 );
             },
-            [EE_SCHEDULER_TASKS.APP_CAPTURE_THUMBNAIL]: async (
-                payload,
-                helpers,
-            ) => {
-                await tryJobOrTimeout(
-                    SchedulerClient.processJob(
-                        EE_SCHEDULER_TASKS.APP_CAPTURE_THUMBNAIL,
-                        helpers.job.id,
-                        helpers.job.run_at,
-                        payload,
-                        async () => {
-                            await this.appGenerateService.captureVersionThumbnail(
-                                payload,
-                            );
-                        },
-                    ),
-                    helpers.job,
-                    APP_CAPTURE_THUMBNAIL_TIMEOUT_MS,
-                    async (_job, e) => {
-                        Logger.warn(
-                            `App ${payload.appUuid}: thumbnail capture timed out for version ${payload.version}: ${getErrorMessage(e)}`,
-                        );
-                    },
+            // Automatic thumbnails are removed. Drains jobs that an older
+            // release enqueued during a rolling deploy; remove next release.
+            [EE_SCHEDULER_TASKS.APP_CAPTURE_THUMBNAIL]: async (payload) => {
+                Logger.info(
+                    `App ${payload.appUuid}: skipped thumbnail capture for version ${payload.version} (automatic thumbnails are removed)`,
                 );
             },
             [EE_SCHEDULER_TASKS.AI_WRITEBACK_PIPELINE]: async (

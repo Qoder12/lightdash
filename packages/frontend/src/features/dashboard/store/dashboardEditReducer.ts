@@ -1,16 +1,17 @@
 import {
+    DashboardControlRefKind,
     DateGranularity,
     EMPTY_DATE_ZOOM_CONFIG,
     isSubDayGranularity,
     type AdditionalMetric,
     type Dashboard,
     type DashboardConfig,
+    type DashboardControlRef,
     type DashboardControlSection,
     type DateZoomConfig,
 } from '@lightdash/common';
 import { createAction, type UnknownAction } from '@reduxjs/toolkit';
 import { isEqual, sortBy } from 'es-toolkit/compat';
-import { removeSectionKeepingLines } from '../../dashboardControls/sections';
 
 /**
  * An unsaved edit of a saved setting. It applies only while the saved value
@@ -43,6 +44,9 @@ export type DashboardEditState = {
     /** Staged sections of the controls rail, in display order */
     controlSections: DashboardControlSection[];
     haveControlSectionsChanged: boolean;
+    /** The bar's order of every control: the saved one, or the editor's reorder */
+    controlOrder: DashboardControlRef[] | undefined;
+    hasControlOrderChanged: boolean;
 };
 
 export const initialDashboardEditState: DashboardEditState = {
@@ -63,6 +67,8 @@ export const initialDashboardEditState: DashboardEditState = {
     hasDefaultDateZoomGranularityChanged: false,
     controlSections: [],
     haveControlSectionsChanged: false,
+    controlOrder: undefined,
+    hasControlOrderChanged: false,
 };
 
 // Sub-day granularities are offered only when an editor enables them
@@ -158,9 +164,11 @@ export const dashboardEditActions = {
     setHaveControlSectionsChanged: createAction<boolean>(
         'dashboardEdit/setHaveControlSectionsChanged',
     ),
-    addControlSection: createAction<DashboardControlSection>(
-        'dashboardEdit/addControlSection',
-    ),
+    /** `barOrder` is the bar's current order, from `selectOrderedControls` */
+    addControlSection: createAction<{
+        section: DashboardControlSection;
+        barOrder: DashboardControlRef[];
+    }>('dashboardEdit/addControlSection'),
     renameControlSection: createAction<DashboardControlSection>(
         'dashboardEdit/renameControlSection',
     ),
@@ -170,6 +178,17 @@ export const dashboardEditActions = {
     /** The sections in a new order and lines (a drag or a keyboard move on the bar) */
     arrangeControlSections: createAction<DashboardControlSection[]>(
         'dashboardEdit/arrangeControlSections',
+    ),
+    /** Seeds the order from the saved config unless the editor reordered */
+    syncControlOrder: createAction<DashboardControlRef[] | undefined>(
+        'dashboardEdit/syncControlOrder',
+    ),
+    setHasControlOrderChanged: createAction<boolean>(
+        'dashboardEdit/setHasControlOrderChanged',
+    ),
+    /** A reorder on the bar: a drag, a keyboard move or a section change */
+    arrangeControls: createAction<DashboardControlRef[]>(
+        'dashboardEdit/arrangeControls',
     ),
     /** `undefined` removes the key: the section follows the default again */
     setControlSectionCollapsed: createAction<{
@@ -311,11 +330,25 @@ export const dashboardEditReducer = (
     if (dashboardEditActions.setHaveControlSectionsChanged.match(action)) {
         return set(state, 'haveControlSectionsChanged', action.payload);
     }
+    // A new section joins the line of the one before it, stored as an order;
+    // the first starts one. A stored order ends the last line with it
     if (dashboardEditActions.addControlSection.match(action)) {
-        return withControlSections(state, [
+        const { section, barOrder } = action.payload;
+        const withSection = withControlSections(state, [
             ...state.controlSections,
-            action.payload,
+            section,
         ]);
+        return state.controlSections.length > 0 &&
+            (state.controlOrder?.length ?? 0) === 0
+            ? {
+                  ...withSection,
+                  controlOrder: [
+                      ...barOrder,
+                      { kind: DashboardControlRefKind.SECTION, id: section.id },
+                  ],
+                  hasControlOrderChanged: true,
+              }
+            : withSection;
     }
     if (dashboardEditActions.renameControlSection.match(action)) {
         const { id, name } = action.payload;
@@ -329,7 +362,7 @@ export const dashboardEditReducer = (
     if (dashboardEditActions.removeControlSection.match(action)) {
         return withControlSections(
             state,
-            removeSectionKeepingLines(state.controlSections, action.payload),
+            state.controlSections.filter(({ id }) => id !== action.payload),
         );
     }
     if (dashboardEditActions.setControlSectionCollapsed.match(action)) {
@@ -347,6 +380,21 @@ export const dashboardEditReducer = (
         return action.payload === state.controlSections
             ? state
             : withControlSections(state, action.payload);
+    }
+    if (dashboardEditActions.syncControlOrder.match(action)) {
+        return state.hasControlOrderChanged
+            ? state
+            : set(state, 'controlOrder', action.payload);
+    }
+    if (dashboardEditActions.setHasControlOrderChanged.match(action)) {
+        return set(state, 'hasControlOrderChanged', action.payload);
+    }
+    if (dashboardEditActions.arrangeControls.match(action)) {
+        return {
+            ...state,
+            controlOrder: action.payload,
+            hasControlOrderChanged: true,
+        };
     }
     return state;
 };

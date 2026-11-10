@@ -6157,9 +6157,6 @@
                     "sectionSlug": {
                         "type": "string"
                     },
-                    "sectionId": {
-                        "type": "string"
-                    },
                     "hidden": {
                         "type": "boolean"
                     },
@@ -6210,21 +6207,15 @@
             },
             "DashboardControlSectionAsCode": {
                 "properties": {
-                    "inline": {
-                        "type": "boolean"
-                    },
                     "collapsed": {
                         "type": "boolean"
                     },
                     "name": {
                         "type": "string"
                     },
-                    "id": {
-                        "type": "string",
-                        "description": "Legacy section identifier accepted on upload."
-                    },
                     "slug": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Portable section identifier; absent, derived from the name."
                     }
                 },
                 "required": ["name"],
@@ -6295,9 +6286,6 @@
                     "sectionSlug": {
                         "type": "string"
                     },
-                    "sectionId": {
-                        "type": "string"
-                    },
                     "valueType": {
                         "$ref": "#/components/schemas/Required_Pick_LightdashProjectParameter.type-or-multiple__"
                     },
@@ -6313,10 +6301,6 @@
                         "type": "string",
                         "nullable": true
                     },
-                    "id": {
-                        "type": "string",
-                        "description": "Legacy project-local identifier accepted on upload."
-                    },
                     "slug": {
                         "type": "string",
                         "description": "Portable control identifier; matching an existing slug preserves its id."
@@ -6325,27 +6309,43 @@
                 "required": ["parameters", "valueType", "value", "label"],
                 "type": "object"
             },
+            "DashboardControlRefKind": {
+                "description": "Kinds of control a `DashboardControlRef` can point at. Open-ended: new kinds\nmay be added, so consumers must ignore a kind they don't know. Request\nvalidation rejects unknown values, so a new kind ships in a release before\nanything writes it.",
+                "enum": ["filter", "parameter", "dateZoom", "section"],
+                "type": "string"
+            },
+            "DashboardControlRefAsCode": {
+                "properties": {
+                    "newLine": {
+                        "type": "boolean",
+                        "description": "Starts a new bar line; absent, it shares the line of the entry before it. On a section member it passes to the next loose entry in the list"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "description": "Slug of a control of this kind in this file: a filter, parameter control, date zoom control or section"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/DashboardControlRefKind"
+                    }
+                },
+                "required": ["slug", "kind"],
+                "type": "object",
+                "description": "A control in `controlOrder`, by its slug in the same file"
+            },
             "DashboardConfigAsCode": {
                 "properties": {
+                    "controlOrder": {
+                        "items": {
+                            "$ref": "#/components/schemas/DashboardControlRefAsCode"
+                        },
+                        "type": "array",
+                        "description": "The order of filters, parameter controls and sections on the bar. Absent: the default order."
+                    },
                     "parameterControls": {
                         "items": {
                             "$ref": "#/components/schemas/DashboardParameterControlAsCode"
                         },
                         "type": "array"
-                    },
-                    "parameterSectionSlugs": {
-                        "properties": {},
-                        "additionalProperties": {
-                            "type": "string"
-                        },
-                        "type": "object"
-                    },
-                    "parameterSections": {
-                        "properties": {},
-                        "additionalProperties": {
-                            "type": "string"
-                        },
-                        "type": "object"
                     },
                     "controlSections": {
                         "items": {
@@ -6868,6 +6868,10 @@
                         "$ref": "#/components/schemas/DashboardFieldTarget",
                         "description": "Target field for the filter"
                     },
+                    "slug": {
+                        "type": "string",
+                        "description": "Resolves `controlOrder` refs in this file; derived on download, never stored"
+                    },
                     "label": {
                         "type": "string"
                     },
@@ -7021,6 +7025,10 @@
                     },
                     {
                         "properties": {
+                            "slug": {
+                                "type": "string",
+                                "description": "Resolves `controlOrder` refs in this file; derived on download, never stored"
+                            },
                             "sectionSlug": {
                                 "type": "string"
                             }
@@ -9771,10 +9779,6 @@
             },
             "DashboardControlSection": {
                 "properties": {
-                    "inline": {
-                        "type": "boolean",
-                        "description": "Sits on the bar line of the section before it; absent, starts a line of its own"
-                    },
                     "collapsed": {
                         "type": "boolean",
                         "description": "Starts folded in the rail and on the bar; absent, the bar folds only a dense section"
@@ -9788,7 +9792,7 @@
                     },
                     "slug": {
                         "type": "string",
-                        "description": "Portable identity supplied by content as code."
+                        "description": "Ignored: content as code derives slugs on every download."
                     }
                 },
                 "required": ["name", "id"],
@@ -9822,7 +9826,7 @@
                     },
                     "slug": {
                         "type": "string",
-                        "description": "Portable identity supplied by content as code."
+                        "description": "Ignored: content as code derives slugs on every download."
                     },
                     "id": {
                         "type": "string"
@@ -9830,11 +9834,6 @@
                 },
                 "required": ["parameters", "valueType", "value", "label", "id"],
                 "type": "object"
-            },
-            "DashboardControlRefKind": {
-                "description": "Kinds of control a `DashboardControlRef` can point at. Open-ended: new kinds\nmay be added, so consumers must ignore a kind they don't know. Request\nvalidation rejects unknown values, so a new kind ships in a release before\nanything writes it.",
-                "enum": ["filter", "parameter", "dateZoom", "section"],
-                "type": "string"
             },
             "DashboardControlRef": {
                 "properties": {
@@ -9860,7 +9859,7 @@
                             "$ref": "#/components/schemas/DashboardControlRef"
                         },
                         "type": "array",
-                        "description": "How controls of every kind interleave on the bar. A hint: readers reconcile\nit with the controls' arrays and sections. Absent: the default order."
+                        "description": "The order of controls of every kind on the bar. A hint: readers drop refs\nthat match no control and append unlisted ones. Absent: the default order."
                     },
                     "parameterControls": {
                         "items": {
@@ -9868,14 +9867,6 @@
                         },
                         "type": "array",
                         "description": "Absent: filled from the parameters tiles use. Present (even empty): exactly these."
-                    },
-                    "parameterSections": {
-                        "properties": {},
-                        "additionalProperties": {
-                            "type": "string"
-                        },
-                        "type": "object",
-                        "description": "Parameter name to section id. Parameters have no saved object of their own."
                     },
                     "controlSections": {
                         "items": {
@@ -15488,7 +15479,15 @@
             },
             "ApiConnectorType": {
                 "description": "The external APIs an api query source can call live.",
-                "enum": ["posthog", "search_console", "ga4"],
+                "enum": [
+                    "posthog",
+                    "search_console",
+                    "ga4",
+                    "meta_ads",
+                    "google_ads",
+                    "youtube_analytics",
+                    "linkedin_ads"
+                ],
                 "type": "string"
             },
             "GoogleLiveSourceChoice": {
@@ -15584,6 +15583,79 @@
                 "required": ["propertyId", "connector"],
                 "type": "object"
             },
+            "ApiConnectorType.META_ADS": {
+                "enum": ["meta_ads"],
+                "type": "string"
+            },
+            "MetaAdsApiSource": {
+                "properties": {
+                    "adAccountId": {
+                        "type": "string",
+                        "description": "The numeric ad account id, without the act_ prefix."
+                    },
+                    "connector": {
+                        "$ref": "#/components/schemas/ApiConnectorType.META_ADS"
+                    }
+                },
+                "required": ["adAccountId", "connector"],
+                "type": "object"
+            },
+            "ApiConnectorType.GOOGLE_ADS": {
+                "enum": ["google_ads"],
+                "type": "string"
+            },
+            "GoogleAdsApiSource": {
+                "properties": {
+                    "loginCustomerId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The manager account the sign-in reaches the customer through, if any."
+                    },
+                    "customerId": {
+                        "type": "string",
+                        "description": "The 10-digit Google Ads customer id, without dashes."
+                    },
+                    "connector": {
+                        "$ref": "#/components/schemas/ApiConnectorType.GOOGLE_ADS"
+                    }
+                },
+                "required": ["loginCustomerId", "customerId", "connector"],
+                "type": "object"
+            },
+            "ApiConnectorType.YOUTUBE_ANALYTICS": {
+                "enum": ["youtube_analytics"],
+                "type": "string"
+            },
+            "YoutubeAnalyticsApiSource": {
+                "properties": {
+                    "channelId": {
+                        "type": "string",
+                        "description": "The YouTube channel id, starting with UC."
+                    },
+                    "connector": {
+                        "$ref": "#/components/schemas/ApiConnectorType.YOUTUBE_ANALYTICS"
+                    }
+                },
+                "required": ["channelId", "connector"],
+                "type": "object"
+            },
+            "ApiConnectorType.LINKEDIN_ADS": {
+                "enum": ["linkedin_ads"],
+                "type": "string"
+            },
+            "LinkedInAdsApiSource": {
+                "properties": {
+                    "adAccountId": {
+                        "type": "string",
+                        "description": "The numeric LinkedIn ad account id, as shown in Campaign Manager."
+                    },
+                    "connector": {
+                        "$ref": "#/components/schemas/ApiConnectorType.LINKEDIN_ADS"
+                    }
+                },
+                "required": ["adAccountId", "connector"],
+                "type": "object"
+            },
             "ExternalConnectionApiSource": {
                 "anyOf": [
                     {
@@ -15594,6 +15666,18 @@
                     },
                     {
                         "$ref": "#/components/schemas/Ga4ApiSource"
+                    },
+                    {
+                        "$ref": "#/components/schemas/MetaAdsApiSource"
+                    },
+                    {
+                        "$ref": "#/components/schemas/GoogleAdsApiSource"
+                    },
+                    {
+                        "$ref": "#/components/schemas/YoutubeAnalyticsApiSource"
+                    },
+                    {
+                        "$ref": "#/components/schemas/LinkedInAdsApiSource"
                     }
                 ],
                 "description": "Connector settings of a live source; the server fixes its access rules."
@@ -23427,6 +23511,83 @@
                 "required": ["results", "status"],
                 "type": "object"
             },
+            "AppStateAdminSharedKey": {
+                "properties": {
+                    "updatedBy": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/AppStateAuthor"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    },
+                    "valueBytes": {
+                        "type": "number",
+                        "format": "double",
+                        "description": "Serialized size of the current value."
+                    },
+                    "version": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "key": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "updatedBy",
+                    "updatedAt",
+                    "valueBytes",
+                    "version",
+                    "key"
+                ],
+                "type": "object",
+                "description": "Admin view of one shared key: metadata only, never the value."
+            },
+            "AppStateAdminOverview": {
+                "properties": {
+                    "user": {
+                        "properties": {
+                            "userCount": {
+                                "type": "number",
+                                "format": "double"
+                            },
+                            "keyCount": {
+                                "type": "number",
+                                "format": "double"
+                            }
+                        },
+                        "required": ["userCount", "keyCount"],
+                        "type": "object"
+                    },
+                    "shared": {
+                        "items": {
+                            "$ref": "#/components/schemas/AppStateAdminSharedKey"
+                        },
+                        "type": "array"
+                    }
+                },
+                "required": ["user", "shared"],
+                "type": "object",
+                "description": "What the app's manage view shows about its stored state. Per-user values\nare private to each writer, so only their volume is reported."
+            },
+            "ApiAppStateAdminOverviewResponse": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/AppStateAdminOverview"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
             "ApiAppUserStateResponse": {
                 "properties": {
                     "results": {
@@ -27360,6 +27521,24 @@
                         },
                         "required": ["arguments", "name", "type"],
                         "type": "object"
+                    },
+                    {
+                        "properties": {
+                            "fieldName": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "modelName": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": ["semantic_model"],
+                                "nullable": false
+                            }
+                        },
+                        "required": ["fieldName", "modelName", "type"],
+                        "type": "object"
                     }
                 ]
             },
@@ -27729,8 +27908,20 @@
                 "type": "object",
                 "description": "From T, pick a set of properties whose keys are in the union K"
             },
+            "ChartMetadataStyle": {
+                "type": "string",
+                "enum": ["compact", "question", "short"]
+            },
             "GenerateChartMetadataRequest": {
                 "properties": {
+                    "styleReferenceTitle": {
+                        "type": "string",
+                        "description": "An existing title whose voice and format the new title should follow."
+                    },
+                    "style": {
+                        "$ref": "#/components/schemas/ChartMetadataStyle",
+                        "description": "Naming style to generate in. Defaults to `question`."
+                    },
                     "chartConfigJson": {
                         "type": "string"
                     },
@@ -32667,7 +32858,8 @@
                     "api",
                     "evals",
                     "scheduler",
-                    "dashboard_analysis"
+                    "dashboard_analysis",
+                    "semantic_studio"
                 ]
             },
             "AiAgentBattleProfile": {
@@ -35287,6 +35479,24 @@
                     },
                     {
                         "properties": {
+                            "fieldName": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "modelName": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": ["semantic_model"],
+                                "nullable": false
+                            }
+                        },
+                        "required": ["fieldName", "modelName", "type"],
+                        "type": "object"
+                    },
+                    {
+                        "properties": {
                             "displayName": {
                                 "type": "string",
                                 "nullable": true
@@ -35631,9 +35841,11 @@
                     "loadMcpTools",
                     "loadProjectContext",
                     "loadSkill",
+                    "proposeSemanticLayerChange",
                     "readAttachments",
                     "readContent",
                     "readPinnedThread",
+                    "readSemanticModel",
                     "resolveUrl",
                     "runComposerQueries",
                     "runContentQuery",
@@ -38530,7 +38742,8 @@
                     "composer",
                     "no_data_access",
                     "deep_research_worker",
-                    "deep_research_coordinator"
+                    "deep_research_coordinator",
+                    "semantic_studio"
                 ],
                 "description": "The exclusive core of an agent run's loadout."
             },
@@ -38929,8 +39142,18 @@
             "ApiAiAgentThreadCreateResponse": {
                 "$ref": "#/components/schemas/ApiSuccess_AiAgentThreadSummary_"
             },
+            "Extract_AiThreadCreatedFrom.semantic_studio_": {
+                "type": "string",
+                "enum": ["semantic_studio"],
+                "nullable": false,
+                "description": "Extract from T those types that are assignable to U"
+            },
             "ApiAiAgentThreadCreateRequest": {
                 "properties": {
+                    "createdFrom": {
+                        "$ref": "#/components/schemas/Extract_AiThreadCreatedFrom.semantic_studio_",
+                        "description": "Starts a Semantic Studio thread, whose agent drafts model changes for the person to apply. Only the app may set it."
+                    },
                     "threadContext": {
                         "type": "string",
                         "description": "Initial context for the agent, up to 10,000 characters. Cannot be changed after creation."
@@ -40790,6 +41013,476 @@
                 "required": ["instruction"],
                 "type": "object"
             },
+            "SemanticLayerStatus": {
+                "properties": {
+                    "enabled": {
+                        "type": "boolean",
+                        "description": "Whether this person can change this project's models from the server."
+                    }
+                },
+                "required": ["enabled"],
+                "type": "object"
+            },
+            "ApiSuccess_SemanticLayerStatus_": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/SemanticLayerStatus"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "ApiSemanticLayerStatusResponse": {
+                "$ref": "#/components/schemas/ApiSuccess_SemanticLayerStatus_"
+            },
+            "SemanticLayerChangeSource": {
+                "type": "string",
+                "enum": ["draft", "undo"]
+            },
+            "SemanticLayerModelChange": {
+                "properties": {
+                    "otherModels": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "description": "The other models the same change set wrote; undoing it reverts them too."
+                    },
+                    "contentAfter": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Null when the change deleted the model."
+                    },
+                    "contentBefore": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Null when the change created the model."
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "reverted": {
+                        "type": "boolean",
+                        "description": "Whether this change was undone."
+                    },
+                    "question": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The question that asked for this; null when none did."
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/SemanticLayerChangeSource"
+                    },
+                    "changeSetUuid": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "otherModels",
+                    "contentAfter",
+                    "contentBefore",
+                    "createdAt",
+                    "reverted",
+                    "question",
+                    "source",
+                    "changeSetUuid"
+                ],
+                "type": "object",
+                "description": "One change to a model's YAML."
+            },
+            "SemanticLayerModelCode": {
+                "properties": {
+                    "history": {
+                        "items": {
+                            "$ref": "#/components/schemas/SemanticLayerModelChange"
+                        },
+                        "type": "array",
+                        "description": "Newest first."
+                    },
+                    "version": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "content": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": ["history", "version", "content", "name"],
+                "type": "object"
+            },
+            "ApiSuccess_SemanticLayerModelCode-or-null_": {
+                "properties": {
+                    "results": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SemanticLayerModelCode"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "ApiSemanticLayerModelResponse": {
+                "$ref": "#/components/schemas/ApiSuccess_SemanticLayerModelCode-or-null_"
+            },
+            "ModelFragmentChange": {
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "created",
+                            "added",
+                            "patched",
+                            "redefined",
+                            "removed"
+                        ]
+                    },
+                    "path": {
+                        "type": "string"
+                    }
+                },
+                "required": ["action", "path"],
+                "type": "object"
+            },
+            "ModelFragmentRefusalReason": {
+                "type": "string",
+                "enum": [
+                    "access",
+                    "name_taken",
+                    "incomplete",
+                    "invalid_filter",
+                    "not_found"
+                ]
+            },
+            "ModelFragmentRefusal": {
+                "properties": {
+                    "reason": {
+                        "$ref": "#/components/schemas/ModelFragmentRefusalReason"
+                    },
+                    "path": {
+                        "type": "string"
+                    }
+                },
+                "required": ["reason", "path"],
+                "type": "object"
+            },
+            "SemanticLayerDraftChange": {
+                "properties": {
+                    "models": {
+                        "items": {
+                            "properties": {
+                                "error": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "Why this no longer applies to what is live; null when it does."
+                                },
+                                "refusals": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/ModelFragmentRefusal"
+                                    },
+                                    "type": "array"
+                                },
+                                "changes": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/ModelFragmentChange"
+                                    },
+                                    "type": "array"
+                                },
+                                "model": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "error",
+                                "refusals",
+                                "changes",
+                                "model"
+                            ],
+                            "type": "object"
+                        },
+                        "type": "array"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "question": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The question that asked for this; null when none did."
+                    },
+                    "draftChangeUuid": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "models",
+                    "createdAt",
+                    "question",
+                    "draftChangeUuid"
+                ],
+                "type": "object",
+                "description": "One change in a person's draft, replayed on what is live whenever it is read."
+            },
+            "SemanticLayerDraftModel": {
+                "properties": {
+                    "explore": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Explore"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "The model as the draft compiles it; null when it is removed or does not compile."
+                    },
+                    "contentAfter": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Null when the draft removes the model."
+                    },
+                    "contentBefore": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Null when the draft creates the model."
+                    },
+                    "model": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "explore",
+                    "contentAfter",
+                    "contentBefore",
+                    "model"
+                ],
+                "type": "object",
+                "description": "A model as the draft leaves it, against what is live."
+            },
+            "SemanticLayerSettledDraftChange": {
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["applied", "discarded", "undone"]
+                    },
+                    "draftChangeUuid": {
+                        "type": "string"
+                    }
+                },
+                "required": ["status", "draftChangeUuid"],
+                "type": "object",
+                "description": "What became of a change that left the draft."
+            },
+            "SemanticLayerDraft": {
+                "properties": {
+                    "settled": {
+                        "items": {
+                            "$ref": "#/components/schemas/SemanticLayerSettledDraftChange"
+                        },
+                        "type": "array"
+                    },
+                    "errors": {
+                        "items": {
+                            "properties": {
+                                "message": {
+                                    "type": "string"
+                                },
+                                "model": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": ["message", "model"],
+                            "type": "object"
+                        },
+                        "type": "array",
+                        "description": "Models the draft leaves unable to compile."
+                    },
+                    "models": {
+                        "items": {
+                            "$ref": "#/components/schemas/SemanticLayerDraftModel"
+                        },
+                        "type": "array"
+                    },
+                    "changes": {
+                        "items": {
+                            "$ref": "#/components/schemas/SemanticLayerDraftChange"
+                        },
+                        "type": "array",
+                        "description": "Oldest first: each builds on the ones before it."
+                    }
+                },
+                "required": ["settled", "errors", "models", "changes"],
+                "type": "object"
+            },
+            "ApiSuccess_SemanticLayerDraft_": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/SemanticLayerDraft"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "ApiSemanticLayerDraftResponse": {
+                "$ref": "#/components/schemas/ApiSuccess_SemanticLayerDraft_"
+            },
+            "SemanticLayerDraftBreak": {
+                "properties": {
+                    "dashboardUuid": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "chartUuid": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "error": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": ["dashboardUuid", "chartUuid", "error", "name"],
+                "type": "object",
+                "description": "A saved chart or dashboard the draft would break; at most one uuid is set, to link to it."
+            },
+            "SemanticLayerDraftImpact": {
+                "properties": {
+                    "breaks": {
+                        "items": {
+                            "$ref": "#/components/schemas/SemanticLayerDraftBreak"
+                        },
+                        "type": "array"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["unchecked", "checking", "done", "failed"],
+                        "description": "`unchecked` when no check has run since the draft or the live models last changed."
+                    }
+                },
+                "required": ["breaks", "status"],
+                "type": "object",
+                "description": "Saved content the draft would break, found by a background check of the draft as it is now."
+            },
+            "ApiSuccess_SemanticLayerDraftImpact_": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/SemanticLayerDraftImpact"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "ApiSemanticLayerDraftImpactResponse": {
+                "$ref": "#/components/schemas/ApiSuccess_SemanticLayerDraftImpact_"
+            },
+            "SemanticLayerDraftApplyResult": {
+                "properties": {
+                    "failures": {
+                        "items": {
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                },
+                                "model": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": ["error", "model"],
+                            "type": "object"
+                        },
+                        "type": "array",
+                        "description": "A draft applies whole, so any failure leaves it as it was."
+                    },
+                    "exploreCount": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true,
+                        "description": "Null when nothing went live."
+                    }
+                },
+                "required": ["failures", "exploreCount"],
+                "type": "object"
+            },
+            "ApiSuccess_SemanticLayerDraftApplyResult_": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/SemanticLayerDraftApplyResult"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "ApiSemanticLayerDraftApplyResponse": {
+                "$ref": "#/components/schemas/ApiSuccess_SemanticLayerDraftApplyResult_"
+            },
+            "ApiSuccess__exploreCount-number__": {
+                "properties": {
+                    "results": {
+                        "properties": {
+                            "exploreCount": {
+                                "type": "number",
+                                "format": "double"
+                            }
+                        },
+                        "required": ["exploreCount"],
+                        "type": "object"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "ApiSemanticLayerUndoResponse": {
+                "$ref": "#/components/schemas/ApiSuccess__exploreCount-number__"
+            },
+            "SemanticLayerUndoRequest": {
+                "properties": {
+                    "changeSetUuids": {
+                        "items": {
+                            "$ref": "#/components/schemas/UUID"
+                        },
+                        "type": "array"
+                    }
+                },
+                "required": ["changeSetUuids"],
+                "type": "object"
+            },
             "PreAggregateDailyStatResult": {
                 "properties": {
                     "updatedAt": {
@@ -41179,6 +41872,33 @@
                         "required": [
                             "threshold",
                             "rowCount",
+                            "message",
+                            "type"
+                        ],
+                        "type": "object"
+                    },
+                    {
+                        "properties": {
+                            "threshold": {
+                                "type": "number",
+                                "format": "double"
+                            },
+                            "fieldCount": {
+                                "type": "number",
+                                "format": "double"
+                            },
+                            "message": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": ["field_count_exceeded"],
+                                "nullable": false
+                            }
+                        },
+                        "required": [
+                            "threshold",
+                            "fieldCount",
                             "message",
                             "type"
                         ],
@@ -46071,7 +46791,8 @@
                             "api",
                             "evals",
                             "scheduler",
-                            "dashboard_analysis"
+                            "dashboard_analysis",
+                            "semantic_studio"
                         ]
                     }
                 },
@@ -57966,6 +58687,7 @@
             "SchedulerTaskName": {
                 "type": "string",
                 "enum": [
+                    "checkSemanticLayerDraftImpact",
                     "reconcileAnalyticsContent",
                     "syncAnalyticsContent",
                     "slackAiPrompt",
@@ -58056,6 +58778,7 @@
                     "compactUsageEvents",
                     "backfillUsageQueryHistory",
                     "pollEmailWhitelabelVerification",
+                    "cleanMobileAppLinks",
                     "cleanWarehouseConnectCodes",
                     "clearDueResultsCaches",
                     "cleanAgentConnectionApprovalRequests",
@@ -63994,15 +64717,14 @@
             },
             "OrganizationSettings": {
                 "properties": {
+                    "dataAppCustomDependenciesEnabled": {
+                        "type": "boolean",
+                        "description": "Whether data app uploads may declare custom npm dependencies. Off by\ndefault; only org admins can change it. Uploaders also need the\n`manage:DataAppDependency` permission."
+                    },
                     "dataAppCapturesEnabled": {
                         "type": "boolean",
                         "nullable": true,
-                        "description": "Whether images of a running data app, and files, may be captured or\nattached anywhere in the data app builder: prompt-bar screenshots, file\nattachments sent to the coding agent, manual and automatic thumbnails,\nand the Slack build-outcome image. Inherits and is capped by the\ninstance-wide `LIGHTDASH_APP_CAPTURES_ENABLED` (the ceiling): an org can\nturn captures off, never back on past the env. `null` inherits it.\nAlways resolved to an effective boolean in API responses."
-                    },
-                    "dataAppAutomaticThumbnailsEnabled": {
-                        "type": "boolean",
-                        "nullable": true,
-                        "description": "Whether a data app version gets a thumbnail captured automatically when\nit becomes ready. On unless the org turned it off, so `null` (or no\nstored row) resolves to `true`. Always resolved to `false` while\n{@link OrganizationSettings.dataAppCapturesEnabled} is off."
+                        "description": "Whether images of a running data app, and files, may be captured or\nattached anywhere in the data app builder: prompt-bar screenshots, file\nattachments sent to the coding agent, manual thumbnails, and the Slack\nbuild-outcome image. Inherits and is capped by the instance-wide\n`LIGHTDASH_APP_CAPTURES_ENABLED` (the ceiling): an org can turn captures\noff, never back on past the env. `null` inherits it.\nAlways resolved to an effective boolean in API responses."
                     },
                     "corsAllowedDomains": {
                         "items": {
@@ -64082,8 +64804,8 @@
                     }
                 },
                 "required": [
+                    "dataAppCustomDependenciesEnabled",
                     "dataAppCapturesEnabled",
-                    "dataAppAutomaticThumbnailsEnabled",
                     "corsAllowedDomains",
                     "csvCellsLimit",
                     "queryLimit",
@@ -64193,15 +64915,14 @@
                         "nullable": true,
                         "description": "Exact origins, wildcard subdomain origins, and regex patterns this org\ncontributes to the instance CORS allow-list. Regex entries use `/.../`\nsyntax."
                     },
-                    "dataAppAutomaticThumbnailsEnabled": {
-                        "type": "boolean",
-                        "nullable": true,
-                        "description": "Whether a data app version gets a thumbnail captured automatically when\nit becomes ready. On unless the org turned it off, so `null` (or no\nstored row) resolves to `true`. Always resolved to `false` while\n{@link OrganizationSettings.dataAppCapturesEnabled} is off."
-                    },
                     "dataAppCapturesEnabled": {
                         "type": "boolean",
                         "nullable": true,
-                        "description": "Whether images of a running data app, and files, may be captured or\nattached anywhere in the data app builder: prompt-bar screenshots, file\nattachments sent to the coding agent, manual and automatic thumbnails,\nand the Slack build-outcome image. Inherits and is capped by the\ninstance-wide `LIGHTDASH_APP_CAPTURES_ENABLED` (the ceiling): an org can\nturn captures off, never back on past the env. `null` inherits it.\nAlways resolved to an effective boolean in API responses."
+                        "description": "Whether images of a running data app, and files, may be captured or\nattached anywhere in the data app builder: prompt-bar screenshots, file\nattachments sent to the coding agent, manual thumbnails, and the Slack\nbuild-outcome image. Inherits and is capped by the instance-wide\n`LIGHTDASH_APP_CAPTURES_ENABLED` (the ceiling): an org can turn captures\noff, never back on past the env. `null` inherits it.\nAlways resolved to an effective boolean in API responses."
+                    },
+                    "dataAppCustomDependenciesEnabled": {
+                        "type": "boolean",
+                        "description": "Whether data app uploads may declare custom npm dependencies. Off by\ndefault; only org admins can change it. Uploaders also need the\n`manage:DataAppDependency` permission."
                     }
                 },
                 "type": "object",
@@ -66256,6 +66977,277 @@
             },
             "ApiNotificationUpdateParams": {
                 "$ref": "#/components/schemas/Pick_Notification.viewed_"
+            },
+            "MobileSignInCode": {
+                "properties": {
+                    "expiresInSeconds": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "expiresAt": {
+                        "type": "string"
+                    },
+                    "approvalNonce": {
+                        "type": "string"
+                    },
+                    "signInUrl": {
+                        "type": "string"
+                    },
+                    "codeUuid": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "expiresInSeconds",
+                    "expiresAt",
+                    "approvalNonce",
+                    "signInUrl",
+                    "codeUuid"
+                ],
+                "type": "object"
+            },
+            "ApiMobileSignInCodeResponse": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/MobileSignInCode"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "MintMobileSignInCodeRequest": {
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "enum": ["show", "auto_refresh"]
+                    }
+                },
+                "required": ["reason"],
+                "type": "object"
+            },
+            "MobileSignInCodeStatus": {
+                "enum": [
+                    "pending",
+                    "claimed",
+                    "approved",
+                    "declined",
+                    "redeemed",
+                    "expired"
+                ],
+                "type": "string"
+            },
+            "MobileSignInPlatform": {
+                "type": "string",
+                "enum": ["ios", "android"]
+            },
+            "MobileSignInCodeDevice": {
+                "properties": {
+                    "clientName": {
+                        "type": "string"
+                    },
+                    "platform": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/MobileSignInPlatform"
+                            },
+                            {
+                                "type": "string",
+                                "enum": ["unknown"]
+                            }
+                        ]
+                    }
+                },
+                "required": ["clientName", "platform"],
+                "type": "object"
+            },
+            "MobileSignInCodeState": {
+                "properties": {
+                    "device": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MobileSignInCodeDevice"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "matchNumber": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "expiresAt": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/MobileSignInCodeStatus"
+                    },
+                    "codeUuid": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "device",
+                    "matchNumber",
+                    "expiresAt",
+                    "status",
+                    "codeUuid"
+                ],
+                "type": "object"
+            },
+            "ApiMobileSignInCodeStateResponse": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/MobileSignInCodeState"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "MobileSignInCodeStatus.APPROVED": {
+                "enum": ["approved"],
+                "type": "string"
+            },
+            "MobileSignInCodeStatus.DECLINED": {
+                "enum": ["declined"],
+                "type": "string"
+            },
+            "MobileSignInDecision": {
+                "properties": {
+                    "matchNumber": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/MobileSignInCodeStatus.APPROVED"
+                            },
+                            {
+                                "$ref": "#/components/schemas/MobileSignInCodeStatus.DECLINED"
+                            }
+                        ]
+                    }
+                },
+                "required": ["matchNumber", "status"],
+                "type": "object"
+            },
+            "ApiMobileSignInDecisionResponse": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/MobileSignInDecision"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "DecideMobileSignInCodeRequest": {
+                "properties": {
+                    "nonce": {
+                        "type": "string"
+                    }
+                },
+                "required": ["nonce"],
+                "type": "object"
+            },
+            "MobileAppLink": {
+                "properties": {
+                    "expiresInSeconds": {
+                        "type": "number",
+                        "format": "double",
+                        "description": "Lifetime set by the server, so clients need not trust their own clock."
+                    },
+                    "expiresAt": {
+                        "type": "string"
+                    },
+                    "scanUrl": {
+                        "type": "string"
+                    },
+                    "linkUuid": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "expiresInSeconds",
+                    "expiresAt",
+                    "scanUrl",
+                    "linkUuid"
+                ],
+                "type": "object"
+            },
+            "ApiMobileAppLinkResponse": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/MobileAppLink"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
+            },
+            "MobileAppPlatform": {
+                "type": "string",
+                "enum": ["ios", "android"]
+            },
+            "MobileAppLinkStatus": {
+                "properties": {
+                    "scanPlatform": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MobileAppPlatform"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "scannedAt": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "expiresAt": {
+                        "type": "string"
+                    },
+                    "linkUuid": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "scanPlatform",
+                    "scannedAt",
+                    "expiresAt",
+                    "linkUuid"
+                ],
+                "type": "object"
+            },
+            "ApiMobileAppLinkStatusResponse": {
+                "properties": {
+                    "results": {
+                        "$ref": "#/components/schemas/MobileAppLinkStatus"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ok"],
+                        "nullable": false
+                    }
+                },
+                "required": ["results", "status"],
+                "type": "object"
             },
             "MetricWithAssociatedTimeDimension": {
                 "allOf": [
@@ -76347,7 +77339,7 @@
     },
     "info": {
         "title": "Lightdash API",
-        "version": "3.185.1",
+        "version": "3.204.0",
         "description": "Open API documentation for all public Lightdash API endpoints. # Authentication Authenticate using the Authorization header with either 'ApiKey <personal-access-token>' or 'Bearer <service-account-token>'. Create a Personal Access Token by following this guide: https://docs.lightdash.com/references/personal_tokens Self-hosted provisioning can use the admin token configured with LD_SETUP_SERVICE_ACCOUNT_TOKEN to create scoped service accounts through the Service Accounts API.\n",
         "license": {
             "name": "MIT"
@@ -90280,6 +91272,503 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/ApiAppendInstructionRequest"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{projectUuid}/semantic-studio/status": {
+            "get": {
+                "operationId": "getSemanticStudioStatus",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSemanticLayerStatusResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Whether this person can change this project's models from the server.",
+                "summary": "Get Semantic Studio status",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/projects/{projectUuid}/semantic-studio/models/{modelName}": {
+            "get": {
+                "operationId": "getSemanticLayerModel",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSemanticLayerModelResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "A model's YAML and its recorded changes, or null when the project keeps no such model.",
+                "summary": "Get a semantic layer model",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "modelName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/projects/{projectUuid}/semantic-studio/draft": {
+            "get": {
+                "operationId": "getSemanticLayerDraft",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSemanticLayerDraftResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "This person's draft of the semantic layer, replayed on what is live now.",
+                "summary": "Get my semantic layer draft",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    }
+                ]
+            },
+            "delete": {
+                "operationId": "discardSemanticLayerDraft",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccessEmpty"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Discards this person's whole draft.",
+                "summary": "Discard my semantic layer draft",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/projects/{projectUuid}/semantic-studio/draft/impact": {
+            "get": {
+                "operationId": "getSemanticLayerDraftImpact",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSemanticLayerDraftImpactResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Saved charts and dashboards that this person's draft would break.",
+                "summary": "Get what my semantic layer draft would break",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "model",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            },
+            "post": {
+                "operationId": "checkSemanticLayerDraftImpact",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccessEmpty"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Checks this person's draft against saved charts and dashboards again, in the background.",
+                "summary": "Check what my semantic layer draft would break",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/projects/{projectUuid}/semantic-studio/draft/apply": {
+            "post": {
+                "operationId": "applySemanticLayerDraft",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSemanticLayerDraftApplyResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Takes this person's whole draft live as one change, or none of it when any part fails its checks.",
+                "summary": "Apply my semantic layer draft",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/projects/{projectUuid}/semantic-studio/draft/models/{model}/apply": {
+            "post": {
+                "operationId": "applySemanticLayerDraftModel",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSemanticLayerDraftApplyResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Takes one model from this person's draft live, or nothing when it fails its checks.",
+                "summary": "Apply one model from my semantic layer draft",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "model",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/projects/{projectUuid}/semantic-studio/draft/models/{model}": {
+            "delete": {
+                "operationId": "discardSemanticLayerDraftModel",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccessEmpty"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Takes one model out of this person's draft.",
+                "summary": "Discard one model from my semantic layer draft",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "model",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/projects/{projectUuid}/semantic-studio/draft/changes/{draftChangeUuid}": {
+            "delete": {
+                "operationId": "discardSemanticLayerDraftChange",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccessEmpty"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Takes one change out of this person's draft.",
+                "summary": "Discard a change from my semantic layer draft",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "draftChangeUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/projects/{projectUuid}/semantic-studio/undo": {
+            "post": {
+                "operationId": "undoSemanticLayerChanges",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSemanticLayerUndoResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Reverts what the given change sets wrote, as one new change.",
+                "summary": "Undo semantic layer changes",
+                "tags": ["Semantic Studio"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "projectUuid",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/UUID"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SemanticLayerUndoRequest"
                             }
                         }
                     }
@@ -108873,6 +110362,297 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/v1/user/mobile/sign-in-codes": {
+            "post": {
+                "operationId": "CreateMobileSignInCode",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMobileSignInCodeResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Creates a one-time code that signs the mobile app in as the current\nuser. Replaces the earlier code of this browser session",
+                "summary": "Create mobile sign-in code",
+                "tags": ["My Account"],
+                "security": [],
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MintMobileSignInCodeRequest"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/mobile/sign-in-codes/{codeUuid}": {
+            "get": {
+                "operationId": "GetMobileSignInCode",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMobileSignInCodeStateResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Gets the state of a mobile sign-in code created by this browser session",
+                "summary": "Get mobile sign-in code",
+                "tags": ["My Account"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "codeUuid",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            },
+            "delete": {
+                "operationId": "CancelMobileSignInCode",
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Deletes an unused mobile sign-in code created by this browser session",
+                "summary": "Cancel mobile sign-in code",
+                "tags": ["My Account"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "codeUuid",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/user/mobile/sign-in-codes/{codeUuid}/approve": {
+            "post": {
+                "operationId": "ApproveMobileSignInCode",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMobileSignInDecisionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Confirms that the phone that claimed this code may sign in",
+                "summary": "Approve mobile sign-in code",
+                "tags": ["My Account"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "codeUuid",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DecideMobileSignInCodeRequest"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/mobile/sign-in-codes/{codeUuid}/decline": {
+            "post": {
+                "operationId": "DeclineMobileSignInCode",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMobileSignInDecisionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Refuses the phone that claimed this code",
+                "summary": "Decline mobile sign-in code",
+                "tags": ["My Account"],
+                "security": [],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "codeUuid",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DecideMobileSignInCodeRequest"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/mobile/app-links": {
+            "post": {
+                "operationId": "CreateMobileAppLink",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMobileAppLinkResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Creates a link that opens the mobile app's store page. The link expires\nafter 30 minutes",
+                "summary": "Create mobile app link",
+                "tags": ["My Account"],
+                "security": [],
+                "parameters": []
+            }
+        },
+        "/api/v1/user/mobile/app-links/{linkUuid}": {
+            "get": {
+                "operationId": "GetMobileAppLinkStatus",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMobileAppLinkStatusResponse"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorPayload"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Gets whether a phone opened a mobile app link created by the current user",
+                "summary": "Get mobile app link status",
+                "tags": ["My Account"],
+                "security": [],
+                "parameters": [
+                    {
+                        "description": "The uuid of the mobile app link",
+                        "in": "path",
+                        "name": "linkUuid",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
             }
         },
         "/api/v1/projects/{projectUuid}/metricsExplorer/{explore}/{metric}/runMetricTotal": {

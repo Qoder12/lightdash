@@ -237,6 +237,8 @@ import {
 import {
     getDashboardWithSectionIds,
     getDashboardWithSectionSlugs,
+    withoutStoredOnlyKeys,
+    type DashboardWithSectionIds,
 } from './sectionSlugs';
 
 type RuntimeChartAsCode = Omit<ChartAsCode, 'chartConfig'> & {
@@ -2158,10 +2160,13 @@ export class CoderService extends BaseService {
                 controlTileSlugs,
             ),
         );
+        // A stored empty order renders as none
+        const storedOrder = config?.controlOrder?.length
+            ? config.controlOrder
+            : undefined;
         // The order appears only once stored; agents also get filter slugs so they can write one
         const orderedControls =
-            controlsEnabled &&
-            (withFilterSlugs || config?.controlOrder !== undefined)
+            controlsEnabled && (withFilterSlugs || storedOrder !== undefined)
                 ? {
                       filters: {
                           dimensions: dashboard.filters.dimensions,
@@ -2172,7 +2177,7 @@ export class CoderService extends BaseService {
                       sections: config?.controlSections ?? [],
                   }
                 : undefined;
-        const dashboardAsCode: DashboardAsCode = {
+        const dashboardAsCode: DashboardWithSectionIds = {
             name: dashboard.name,
             description: dashboard.description,
             updatedAt: dashboard.updatedAt,
@@ -2192,17 +2197,17 @@ export class CoderService extends BaseService {
             slug: dashboard.slug,
             ...(config && {
                 config: {
-                    ...omit(config, 'controlOrder'),
+                    ...withoutStoredOnlyKeys(config),
                     ...(config?.parameterControls !== undefined && {
                         parameterControls: getParameterControlsWithSlugs(
                             config.parameterControls,
                         ),
                     }),
                     ...(orderedControls &&
-                        config.controlOrder !== undefined && {
+                        storedOrder !== undefined && {
                             controlOrder: getControlOrderAsCode({
                                 ...orderedControls,
-                                controlOrder: config?.controlOrder,
+                                controlOrder: storedOrder,
                             }),
                         }),
                 },
@@ -2220,9 +2225,7 @@ export class CoderService extends BaseService {
             verification: verificationMap.get(dashboard.uuid) ?? null,
         };
 
-        return controlsEnabled
-            ? getDashboardWithSectionSlugs(dashboardAsCode)
-            : dashboardAsCode;
+        return getDashboardWithSectionSlugs(dashboardAsCode);
     }
 
     private static convertTabsWithSlugsToUuids(

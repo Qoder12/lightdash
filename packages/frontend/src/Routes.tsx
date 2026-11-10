@@ -24,6 +24,21 @@ const FALLBACK_ROUTE: RouteObject = {
 };
 
 const PUBLIC_ROUTES: RouteObject[] = [
+    {
+        path: '/m/app',
+        lazy: async () => ({
+            Component: (await import('./features/mobile/MobileAppLandingPage'))
+                .default,
+        }),
+    },
+    {
+        path: '/m/sign-in',
+        lazy: async () => ({
+            Component: (
+                await import('./features/mobile/MobileSignInLandingPage')
+            ).default,
+        }),
+    },
     ...AUTH_ROUTES,
     {
         path: '/register',

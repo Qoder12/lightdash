@@ -191,6 +191,8 @@ export * from './types/managedSignIn';
 export * from './types/mergeQuery';
 export * from './types/metricQuery';
 export * from './types/metricsExplorer';
+export * from './types/mobileAppLink';
+export * from './types/mobileSignIn';
 export * from './types/notifications';
 export * from './types/oauth';
 export * from './types/openIdIdentity';
@@ -374,6 +376,7 @@ export * from './types/roadmap';
 export * from './types/roles';
 export * from './types/savedCharts';
 export * from './types/scheduler';
+export * from './types/semanticStudio';
 export * from './types/schedulerLog';
 export * from './types/schedulerTaskList';
 export * from './types/scopes';
@@ -1296,6 +1299,7 @@ export const SPACE_TREE_2: TreeCreateSpace[] = [
 export * from './compiler/compileLightdashModels';
 
 export * from './lightdash/LightdashModelEditor';
+export * from './lightdash/applyModelFragment';
 export * from './lightdash/convertCustomMetricToLightdash';
 export * from './types/analyticsProject';
 export * from './types/recentContent';

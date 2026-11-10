@@ -254,6 +254,16 @@ import {
     ManagedSignInTokenUsesTableName,
 } from '../database/entities/managedSignInTokenUses';
 import {
+    MobileAppLinkRateCountersTable,
+    MobileAppLinkRateCountersTableName,
+    MobileAppLinksTable,
+    MobileAppLinksTableName,
+} from '../database/entities/mobileAppLinks';
+import {
+    MobileSignInCodesTable,
+    MobileSignInCodesTableName,
+} from '../database/entities/mobileSignInCodes';
+import {
     NotificationsTable,
     NotificationsTableName,
 } from '../database/entities/notifications';
@@ -381,6 +391,24 @@ import {
     ProjectMembershipsTable,
     ProjectMembershipsTableName,
 } from '../database/entities/projectMemberships';
+import {
+    ProjectModelChangeSetsTable,
+    ProjectModelChangeSetsTableName,
+    ProjectModelRevisionsTable,
+    ProjectModelRevisionsTableName,
+} from '../database/entities/projectModelChangeSets';
+import {
+    ProjectModelDocumentsTable,
+    ProjectModelDocumentsTableName,
+} from '../database/entities/projectModelDocuments';
+import {
+    ProjectModelDraftChangesTable,
+    ProjectModelDraftChangesTableName,
+} from '../database/entities/projectModelDraftChanges';
+import {
+    ProjectModelDraftImpactsTable,
+    ProjectModelDraftImpactsTableName,
+} from '../database/entities/projectModelDraftImpacts';
 import {
     ProjectParametersTable,
     ProjectParametersTableName,
@@ -918,6 +946,7 @@ declare module 'knex/types/tables' {
         [GroupTableName]: GroupTable;
         [GroupMembershipTableName]: GroupMembershipTable;
         [HeadlessBrowserLoginGrantsTableName]: HeadlessBrowserLoginGrantTable;
+        [MobileSignInCodesTableName]: MobileSignInCodesTable;
         [SshKeyPairTableName]: SshKeyPairTable;
         [AwsWebIdentityAudiencesTableName]: AwsWebIdentityAudiencesTable;
         [UserAttributesTable]: UserAttributeTable;
@@ -960,6 +989,11 @@ declare module 'knex/types/tables' {
         [AiAgentLiveActivitiesTableName]: AiAgentLiveActivityTable;
         [AiAgentLiveActivityStartAttemptsTableName]: AiAgentLiveActivityStartAttemptTable;
         [HomepageRecommendedActionSkipsTableName]: HomepageRecommendedActionSkipsTable;
+        [ProjectModelDocumentsTableName]: ProjectModelDocumentsTable;
+        [ProjectModelChangeSetsTableName]: ProjectModelChangeSetsTable;
+        [ProjectModelRevisionsTableName]: ProjectModelRevisionsTable;
+        [ProjectModelDraftChangesTableName]: ProjectModelDraftChangesTable;
+        [ProjectModelDraftImpactsTableName]: ProjectModelDraftImpactsTable;
         [AiAgentTableName]: AiAgentTable;
         [AiAgentDocumentTableName]: AiAgentDocumentTable;
         [AiAgentDocumentAccessTableName]: AiAgentDocumentAccessTable;
@@ -1003,6 +1037,8 @@ declare module 'knex/types/tables' {
         [SlackChannelProjectMappingsTableName]: SlackChannelProjectMappingsTable;
         [WarehouseAvailableTablesTableName]: WarehouseAvailableTablesTable;
         [WarehouseConnectCodeTableName]: WarehouseConnectCodeTable;
+        [MobileAppLinksTableName]: MobileAppLinksTable;
+        [MobileAppLinkRateCountersTableName]: MobileAppLinkRateCountersTable;
         [AiUsageLedgerTableName]: AiUsageLedgerTable;
         [UsageProcessingStatusTableName]: UsageProcessingStatusTable;
         [AiCreditRateCardTableName]: AiCreditRateCardTable;

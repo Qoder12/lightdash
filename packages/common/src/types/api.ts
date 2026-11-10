@@ -332,6 +332,15 @@ import type {
     ApiMetricsExplorerTotalResults,
 } from './metricsExplorer';
 import {
+    type ApiMobileAppLinkResponse,
+    type ApiMobileAppLinkStatusResponse,
+} from './mobileAppLink';
+import {
+    type ApiMobileSignInCodeResponse,
+    type ApiMobileSignInCodeStateResponse,
+    type ApiMobileSignInDecisionResponse,
+} from './mobileSignIn';
+import {
     type CreateOAuthClientResponse,
     type OAuthClientSummary,
 } from './oauth';
@@ -460,6 +469,11 @@ import {
 } from './scheduler';
 import { type SchedulerWithLogs } from './schedulerLog';
 import { type SearchResults } from './search';
+import {
+    type ApiSemanticLayerDraftApplyResponse,
+    type ApiSemanticLayerDraftImpactResponse,
+    type ApiSemanticLayerDraftResponse,
+} from './semanticStudio';
 import { type ShareUrl } from './share';
 import { type SharedSignInStatus } from './sharedSignIn';
 import { type ApiSlackChannelsResponse } from './slack';
@@ -1473,6 +1487,11 @@ type ApiResults =
     | CreateTrainingPreviewResults
     | ApiWarehouseConnectCodeResponse['results']
     | ApiWarehouseConnectCodeClaimResponse['results']
+    | ApiMobileAppLinkResponse['results']
+    | ApiMobileAppLinkStatusResponse['results']
+    | ApiMobileSignInCodeResponse['results']
+    | ApiMobileSignInCodeStateResponse['results']
+    | ApiMobileSignInDecisionResponse['results']
     | ApiQueryResults
     | ApiSqlQueryResults
     | ApiCompiledQueryResults
@@ -1863,7 +1882,10 @@ type ApiResults =
     | ApiLearnCommandOutputResponse['results']
     | ApiAiProviderCredentialsResponse['results']
     | ApiAiProviderCredentialCreatedResponse['results']
-    | ApiProjectAiCredentialResponse['results'];
+    | ApiProjectAiCredentialResponse['results']
+    | ApiSemanticLayerDraftResponse['results']
+    | ApiSemanticLayerDraftApplyResponse['results']
+    | ApiSemanticLayerDraftImpactResponse['results'];
 // Note: EE API types removed from ApiResults to avoid circular imports
 // They can still be used with ApiResponse<T> by importing from '@lightdash/common'
 

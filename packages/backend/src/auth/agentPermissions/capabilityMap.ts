@@ -68,6 +68,8 @@ export const AGENT_TOOL_CAPABILITIES = {
     editContent: [AgentCapability.ContentWrite],
     editDbtProject: [AgentCapability.DbtWriteback],
     editProjectContext: [AgentCapability.DbtWriteback],
+    proposeSemanticLayerChange: [AgentCapability.DbtWriteback],
+    readSemanticModel: [AgentCapability.ReadDiscover],
     exploreRepo: [AgentCapability.ReadDiscover],
     exportChartAsCode: [AgentCapability.Export],
     findCharts: [AgentCapability.ReadDiscover],
@@ -1035,6 +1037,21 @@ export const REST_OPERATION_CAPABILITIES = {
     'HomepageRecommendedActionSkipsController.unskip': [
         AgentCapability.Administration,
     ],
+    'SemanticStudioController.applyDraft': [AgentCapability.DbtWriteback],
+    'SemanticStudioController.applyDraftModel': [AgentCapability.DbtWriteback],
+    'SemanticStudioController.checkDraftImpact': [AgentCapability.DbtWriteback],
+    'SemanticStudioController.discardDraftModel': [
+        AgentCapability.DbtWriteback,
+    ],
+    'SemanticStudioController.discardDraft': [AgentCapability.DbtWriteback],
+    'SemanticStudioController.discardDraftChange': [
+        AgentCapability.DbtWriteback,
+    ],
+    'SemanticStudioController.getDraft': [AgentCapability.DbtWriteback],
+    'SemanticStudioController.getDraftImpact': [AgentCapability.DbtWriteback],
+    'SemanticStudioController.getModel': [AgentCapability.DbtWriteback],
+    'SemanticStudioController.getBuilderStatus': [AgentCapability.ReadDiscover],
+    'SemanticStudioController.undo': [AgentCapability.DbtWriteback],
     'InviteLinksController.createInviteLink': [AgentCapability.Administration],
     'InviteLinksController.revokeAllInviteLinks': [
         AgentCapability.Administration,

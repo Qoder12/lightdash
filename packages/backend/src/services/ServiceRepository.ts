@@ -73,6 +73,8 @@ import { LicenseService } from './LicenseService/LicenseService';
 import { LightdashAnalyticsService } from './LightdashAnalyticsService/LightdashAnalyticsService';
 import { LinearAppService } from './LinearAppService/LinearAppService';
 import { MetricsExplorerService } from './MetricsExplorerService/MetricsExplorerService';
+import { MobileAppService } from './MobileAppService/MobileAppService';
+import { MobileSignInService } from './MobileSignInService/MobileSignInService';
 import { NotificationsService } from './NotificationsService/NotificationsService';
 import { ManagedSignInService } from './OAuthService/managedSignIn/ManagedSignInService';
 import { OAuthService } from './OAuthService/OAuthService';
@@ -193,7 +195,9 @@ interface ServiceManifest {
     userAttributesService: UserAttributesService;
     userService: UserService;
     validationService: ValidationService;
+    mobileAppService: MobileAppService;
     warehouseConnectService: WarehouseConnectService;
+    mobileSignInService: MobileSignInService;
     catalogService: CatalogService;
     metricsExplorerService: MetricsExplorerService;
     promoteService: PromoteService;
@@ -223,6 +227,7 @@ interface ServiceManifest {
     aiDeepResearchService: unknown;
     aiAgentMemoryService: unknown;
     homepageRecommendedActionSkipsService: unknown;
+    semanticStudioService: unknown;
     aiAgentReviewNotificationService: unknown;
     writebackPreviewService: unknown;
     appGenerateService: unknown;
@@ -784,6 +789,25 @@ export class ServiceRepository
                     lightdashConfig: this.context.lightdashConfig,
                     getManagedSignInService: () =>
                         this.getManagedSignInService(),
+                    getMobileSignInService: () => this.getMobileSignInService(),
+                }),
+        );
+    }
+
+    public getMobileSignInService(): MobileSignInService {
+        return this.getService(
+            'mobileSignInService',
+            () =>
+                new MobileSignInService({
+                    lightdashConfig: this.context.lightdashConfig,
+                    mobileSignInCodeModel:
+                        this.models.getMobileSignInCodeModel(),
+                    mobileAppLinkModel: this.models.getMobileAppLinkModel(),
+                    featureFlagModel: this.models.getFeatureFlagModel(),
+                    userModel: this.models.getUserModel(),
+                    oauthModel: this.models.getOauthModel(),
+                    getUserService: () => this.getUserService(),
+                    analytics: this.context.lightdashAnalytics,
                 }),
         );
     }
@@ -1776,6 +1800,19 @@ export class ServiceRepository
         );
     }
 
+    public getMobileAppService(): MobileAppService {
+        return this.getService(
+            'mobileAppService',
+            () =>
+                new MobileAppService({
+                    mobileAppLinkModel: this.models.getMobileAppLinkModel(),
+                    featureFlagModel: this.models.getFeatureFlagModel(),
+                    analytics: this.context.lightdashAnalytics,
+                    lightdashConfig: this.context.lightdashConfig,
+                }),
+        );
+    }
+
     public getWarehouseConnectService(): WarehouseConnectService {
         return this.getService(
             'warehouseConnectService',
@@ -2148,6 +2185,12 @@ export class ServiceRepository
         HomepageRecommendedActionSkipsServiceImplT,
     >(): HomepageRecommendedActionSkipsServiceImplT {
         return this.getService('homepageRecommendedActionSkipsService');
+    }
+
+    public getSemanticStudioService<
+        SemanticStudioServiceImplT,
+    >(): SemanticStudioServiceImplT {
+        return this.getService('semanticStudioService');
     }
 
     public getAiAgentCoderService<

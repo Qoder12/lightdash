@@ -50,11 +50,21 @@ export enum FeatureFlags {
     DashboardControls = 'dashboard-controls',
 
     /**
-     * Enable data apps feature. Disabled by default. Self-hosted
-     * deployments can force it on with APPS_RUNTIME_ENABLED=true, which
-     * the config parser translates into the enable allowlist. Does not gate
-     * Chart Studio, which is available with a valid licence and a configured
-     * sandbox provider, but still keeps installed chart types usable.
+     * Dashboard edit ergonomics: editing uses a grid twice as fine (72
+     * columns, half-height rows), so tiles can land on half-steps, saved as
+     * fractional positions. Rolled out per organization. Temporary: remove
+     * once it is the default.
+     */
+    DashboardEditErgonomics = 'dashboard-edit-ergonomics',
+
+    /**
+     * Data apps availability, computed rather than rolled out: on for any org
+     * with AI (the AI copilot flag or an AI trial) on an instance with a
+     * configured sandbox runtime. Overrides and the flag default are ignored
+     * (see CommercialFeatureFlagModel). Self-hosted deployments can still
+     * force it on with APPS_RUNTIME_ENABLED=true, which the config parser
+     * translates into the enable allowlist. Does not gate Chart Studio, which
+     * is available with a valid licence and a configured sandbox provider.
      */
     EnableDataApps = 'enable-data-apps',
 
@@ -65,46 +75,12 @@ export enum FeatureFlags {
     AiAccessSkipResultsCache = 'ai-access-skip-results-cache',
 
     /**
-     * Per-organization gate for declaring custom npm dependencies in data
-     * apps. Disabled by default; self-hosted instances can enable it globally
-     * via LIGHTDASH_ENABLE_FEATURE_FLAGS.
-     */
-    EnableDataAppCustomDependencies = 'enable-data-app-custom-dependencies',
-
-    /**
-     * Per-organization rollout of AI analysis in data apps (detect anomalies,
-     * investigate with an agent). Gates the endpoints and the admin toggle;
-     * the org's `dataAppRuntimeAiEnabled` setting is the separate customer
-     * consent. Disabled by default.
-     */
-    EnableDataAppAnalysis = 'enable-data-app-analysis',
-
-    /**
-     * Per-organization rollout of AI analysis on classic dashboards. Gates the
-     * dashboard analysis endpoints and entry points; shares the org's
-     * `dataAppRuntimeAiEnabled` consent setting and daily analysis budgets
-     * with data-app analysis. Disabled by default.
-     */
-    EnableDashboardAnalysis = 'enable-dashboard-analysis',
-
-    /**
-     * Per-organization gate for automatic (obscured) data app thumbnail
-     * capture and its settings card. Disabled by default.
-     */
-    EnableDataAppAutomaticThumbnails = 'enable-data-app-automatic-thumbnails',
-
-    /**
      * Per-user / per-organization gate for the data app state store
      * (`useAppState` / `useSharedAppState` in the SDK and its endpoints).
      * Resolves user override, then organization, then instance default.
      * Disabled by default on Cloud and self-hosted.
      */
     EnableDataAppState = 'enable-data-app-state',
-
-    /**
-     * Enable Autopilot project health agent.
-     */
-    AiAutopilot = 'ai-autopilot',
 
     /**
      * Enable the Hexbin (H3 hexagonal binning) layer type for Map charts.
@@ -193,11 +169,11 @@ export enum FeatureFlags {
     ApiQuerySources = 'api-query-sources',
 
     /**
-     * Enable the "My query history" page
-     * (/projects/{projectUuid}/query-history) and its listing endpoint
-     * (GET /api/v2/projects/{projectUuid}/query/history). Off by default.
+     * Keeps the models of a project that has no dbt connection on the server,
+     * and lets the Semantic Studio agent draft changes to them for a person to
+     * apply. Off by default; organization-scoped.
      */
-    QueryHistory = 'query-history',
+    SemanticStudioEditing = 'semantic-studio-editing',
 
     /**
      * Configurable retention for AI agent threads. Off by default; enabled
@@ -263,6 +239,11 @@ export enum FeatureFlags {
      * install and sign in to the mobile apps. Off by default.
      */
     MobileSettings = 'mobile-settings',
+    /**
+     * Organization-scoped: the sign-in step on the Mobile page and its
+     * endpoints. Off by default until an app release supports QR sign-in.
+     */
+    MobileQrSignIn = 'mobile-qr-sign-in',
     /**
      * Organization-scoped, off by default: BigQuery workload identity federation.
      * Only enable on instances whose pods run as their own Google service account.

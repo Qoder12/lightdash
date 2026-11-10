@@ -952,6 +952,14 @@ export class SchedulerWorker extends SchedulerTask {
                 },
             },
             {
+                task: SCHEDULER_TASKS.CLEAN_MOBILE_APP_LINKS,
+                pattern: '47 * * * *', // Hourly, off the top of the hour
+                options: {
+                    backfillPeriod: 2 * 3600 * 1000, // 2 hours in ms
+                    maxAttempts: 3,
+                },
+            },
+            {
                 task: SCHEDULER_TASKS.CLEAN_WAREHOUSE_CONNECT_CODES,
                 pattern: '41 * * * *', // Hourly, off the top of the hour
                 options: {
@@ -2186,6 +2194,16 @@ export class SchedulerWorker extends SchedulerTask {
             },
             [SCHEDULER_TASKS.CLEAR_DUE_RESULTS_CACHES]: async () => {
                 await this.projectService.clearDueResultsCaches();
+            },
+            [SCHEDULER_TASKS.CLEAN_MOBILE_APP_LINKS]: async () => {
+                const [{ links, rateCounters }, signInCodes] =
+                    await Promise.all([
+                        this.mobileAppLinkModel.deleteExpired(),
+                        this.mobileSignInCodeModel.deleteExpired(),
+                    ]);
+                Logger.info(
+                    `Mobile app links cleanup completed. Deleted links: ${links}, rate counters: ${rateCounters}, sign-in codes: ${signInCodes}`,
+                );
             },
             [SCHEDULER_TASKS.CLEAN_WAREHOUSE_CONNECT_CODES]: async () => {
                 Logger.info('Starting warehouse connect codes cleanup job');

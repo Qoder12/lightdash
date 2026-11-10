@@ -117,6 +117,10 @@ export type AppBuildFromSourceJobPayload = TraceTaskBase & {
 };
 
 // `userUuid` is the version's creator, whom the capture renders as.
+/**
+ * @deprecated Automatic thumbnails are removed; the worker only drains jobs an
+ * older release enqueued. Remove with the task next release.
+ */
 export type AppCaptureThumbnailJobPayload = TraceTaskBase & {
     appUuid: string;
     version: number;
@@ -197,6 +201,7 @@ export type SyncAnalyticsContentPayload = Partial<TraceTaskBase> & {
 };
 
 export const EE_SCHEDULER_TASKS = {
+    CHECK_SEMANTIC_LAYER_DRAFT_IMPACT: 'checkSemanticLayerDraftImpact',
     RECONCILE_ANALYTICS_CONTENT: 'reconcileAnalyticsContent',
     SYNC_ANALYTICS_CONTENT: 'syncAnalyticsContent',
     SLACK_AI_PROMPT: 'slackAiPrompt',
@@ -293,6 +298,7 @@ export const SCHEDULER_TASKS = {
     COMPACT_USAGE_EVENTS: 'compactUsageEvents',
     BACKFILL_USAGE_QUERY_HISTORY: 'backfillUsageQueryHistory',
     POLL_EMAIL_WHITELABEL: 'pollEmailWhitelabelVerification',
+    CLEAN_MOBILE_APP_LINKS: 'cleanMobileAppLinks',
     CLEAN_WAREHOUSE_CONNECT_CODES: 'cleanWarehouseConnectCodes',
     CLEAR_DUE_RESULTS_CACHES: 'clearDueResultsCaches',
     CLEAN_AGENT_CONNECTION_APPROVAL_REQUESTS:
@@ -311,6 +317,7 @@ export const ALL_TASK_NAMES: SchedulerTaskName[] =
 export interface TaskPayloadMap {
     [SCHEDULER_TASKS.RECONCILE_ANALYTICS_CONTENT]: ReconcileAnalyticsContentPayload;
     [SCHEDULER_TASKS.SYNC_ANALYTICS_CONTENT]: SyncAnalyticsContentPayload;
+    [SCHEDULER_TASKS.CHECK_SEMANTIC_LAYER_DRAFT_IMPACT]: TraceTaskBase;
     [SCHEDULER_TASKS.HANDLE_SCHEDULED_DELIVERY]: ScheduledDeliveryPayload;
     // Legacy individual notification tasks (deprecated)
     [SCHEDULER_TASKS.SEND_SLACK_NOTIFICATION]: SlackNotificationPayload;
@@ -355,6 +362,7 @@ export interface TaskPayloadMap {
     [SCHEDULER_TASKS.COMPACT_USAGE_EVENTS]: CompactUsageEventsPayload;
     [SCHEDULER_TASKS.BACKFILL_USAGE_QUERY_HISTORY]: TraceTaskBase;
     [SCHEDULER_TASKS.POLL_EMAIL_WHITELABEL]: TraceTaskBase;
+    [SCHEDULER_TASKS.CLEAN_MOBILE_APP_LINKS]: TraceTaskBase;
     [SCHEDULER_TASKS.CLEAN_WAREHOUSE_CONNECT_CODES]: TraceTaskBase;
     [SCHEDULER_TASKS.CLEAR_DUE_RESULTS_CACHES]: TraceTaskBase;
     [SCHEDULER_TASKS.CLEAN_AGENT_CONNECTION_APPROVAL_REQUESTS]: TraceTaskBase;
@@ -417,6 +425,7 @@ export interface TaskPayloadMap {
 export interface EETaskPayloadMap {
     [EE_SCHEDULER_TASKS.RECONCILE_ANALYTICS_CONTENT]: ReconcileAnalyticsContentPayload;
     [EE_SCHEDULER_TASKS.SYNC_ANALYTICS_CONTENT]: SyncAnalyticsContentPayload;
+    [EE_SCHEDULER_TASKS.CHECK_SEMANTIC_LAYER_DRAFT_IMPACT]: TraceTaskBase;
     [EE_SCHEDULER_TASKS.SLACK_AI_PROMPT]: SlackPromptJobPayload;
     [EE_SCHEDULER_TASKS.SLACK_AI_ARTIFACT_IMAGES]: SlackPromptJobPayload;
     [EE_SCHEDULER_TASKS.SWEEP_SLACK_AI_ARTIFACT_IMAGES]: TraceTaskBase;
