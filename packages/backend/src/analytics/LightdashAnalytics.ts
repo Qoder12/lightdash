@@ -1730,6 +1730,7 @@ export type CreateDashboardOrVersionEvent = BaseTrack & {
         dateZoomGranularitiesCount: number;
         defaultDateZoomGranularity: string | null;
         dateZoomControlsCount: number;
+        hiddenDateZoomControlsCount: number;
         dateZoomTileTargetsCount: number;
         sectionsCount: number;
         sectionedFiltersCount: number;
