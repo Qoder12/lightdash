@@ -59,11 +59,13 @@ import {
     selectDateZoomGranularity,
     selectIsDateZoomDisabled,
     useDashboardDateZoomConfig,
+    useDefaultDateZoomGranularity,
     useDashboardSelector,
     useDashboardTemporaryFilters,
     useDashboardUnmetFilterRequirements,
 } from '../dashboard/store';
 import { ControlsBar } from '../dashboardControls/ControlsBar';
+import { getDefaultZoomSummaryLabel } from '../dashboardControls/dateZoomGrains';
 import addFilterClasses from '../dashboardFilters/AddFilterButton.module.css';
 import { DashboardFiltersBar } from '../dashboardFilters/DashboardFiltersBar';
 import { DashboardFiltersBarSummary } from '../dashboardFilters/DashboardFiltersBarSummary';
@@ -404,6 +406,7 @@ const DashboardTabs: FC<DashboardTabsProps> = ({
     const isDateZoomDisabled = useDashboardSelector(selectIsDateZoomDisabled);
     const getUiString = useUiStrings();
     const dateZoomGranularity = useDashboardSelector(selectDateZoomGranularity);
+    const defaultDateZoomGranularity = useDefaultDateZoomGranularity();
     const dashboardTemporaryFilters = useDashboardTemporaryFilters();
 
     // filters bar state
@@ -1132,10 +1135,19 @@ const DashboardTabs: FC<DashboardTabsProps> = ({
                                             dateZoomLabel={
                                                 isDateZoomDisabled
                                                     ? null
-                                                    : getDateZoomSummaryLabel(
-                                                          dateZoomGranularity,
-                                                          getUiString,
-                                                      )
+                                                    : isDashboardControlsEnabled
+                                                      ? // As the default zoom's pill: its grain, or None
+                                                        getDefaultZoomSummaryLabel(
+                                                            dateZoomGranularity ??
+                                                                (isEditMode
+                                                                    ? defaultDateZoomGranularity
+                                                                    : undefined),
+                                                            getUiString,
+                                                        )
+                                                      : getDateZoomSummaryLabel(
+                                                            dateZoomGranularity,
+                                                            getUiString,
+                                                        )
                                             }
                                             onExpand={() =>
                                                 isEditMode
