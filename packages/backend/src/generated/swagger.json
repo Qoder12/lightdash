@@ -67047,6 +67047,10 @@
                 ],
                 "type": "string"
             },
+            "MobileSignInDeclinedBy": {
+                "type": "string",
+                "enum": ["web", "phone", "failed_redeems"]
+            },
             "MobileSignInPlatform": {
                 "type": "string",
                 "enum": ["ios", "android"]
@@ -67081,6 +67085,14 @@
                         ],
                         "nullable": true
                     },
+                    "declinedBy": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MobileSignInDeclinedBy"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "matchNumber": {
                         "type": "string",
                         "nullable": true
@@ -67097,6 +67109,7 @@
                 },
                 "required": [
                     "device",
+                    "declinedBy",
                     "matchNumber",
                     "expiresAt",
                     "status",
