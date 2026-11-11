@@ -81,15 +81,16 @@ import { TabEditModal } from './EditTabModal';
 import GridTile from './GridTile';
 import {
     convertLayoutToBaseCoordinates,
-    hasGridItemMoved,
     DEFAULT_ROW_HEIGHT,
     EDIT_ACTION_BAR_CLEARANCE,
     FINE_GRID_SCALE,
     FIT_TO_SCREEN_GRID_BOTTOM_PADDING,
     getDashboardLayouts,
+    getLayoutToSaveAfterEdit,
     type DashboardLayouts,
     getResponsiveGridLayoutProps,
     getRowHeightForScale,
+    matchesSavedLayout,
 } from './gridUtils';
 import { ResponsiveGridLayout } from './ResponsiveGridLayout';
 import DraggableTab from './Tab';
@@ -331,16 +332,17 @@ const DashboardTabs: FC<DashboardTabsProps> = ({
 
     const showGridLines = isEditMode && isInteracting;
 
-    const handleUpdateTilesWithScaling = useCallback(
-        async (layout: Layout[]) => {
-            const unscaledLayout = convertLayoutToBaseCoordinates(
-                layout,
-                gridScale,
-            );
-            await handleUpdateTiles(unscaledLayout);
-        },
-        [gridScale, handleUpdateTiles],
+    const homeRowsRef = useRef(
+        new Map<string, { tabUuid: string | null | undefined; y: number }>(),
     );
+    useEffect(() => {
+        if (!isEditMode) homeRowsRef.current.clear();
+    }, [isEditMode]);
+
+    const [gridRedraw, setGridRedraw] = useState<{
+        tileUuid: string;
+        layouts: DashboardLayouts;
+    } | null>(null);
 
     const { start: startAutoScroll, stop: stopAutoScroll } =
         useAutoScrollOnDrag();
@@ -355,11 +357,59 @@ const DashboardTabs: FC<DashboardTabsProps> = ({
         (layout: Layout[], before: Layout, after: Layout) => {
             stopAutoScroll();
             setIsInteracting(false);
-            if (hasGridItemMoved(before, after)) {
-                void handleUpdateTilesWithScaling(layout);
+            const tiles = dashboardTiles ?? [];
+            const homeRows = homeRowsRef.current;
+            tiles.forEach((tile) => {
+                const homeRow = homeRows.get(tile.uuid);
+                if (!homeRow || homeRow.tabUuid !== tile.tabUuid) {
+                    homeRows.set(tile.uuid, {
+                        tabUuid: tile.tabUuid,
+                        y: tile.y,
+                    });
+                }
+            });
+            const previous = new Map(
+                tiles.map(({ uuid, x, y, w, h }) => [
+                    uuid,
+                    { i: uuid, x, y, w, h },
+                ]),
+            );
+            const layoutToSave = getLayoutToSaveAfterEdit({
+                layout,
+                before,
+                after,
+                gridScale,
+                previous,
+                home: new Map(
+                    [...homeRows].map(([tileUuid, { y }]) => [tileUuid, y]),
+                ),
+            });
+            if (layoutToSave) {
+                const edited = layoutToSave.find((item) => item.i === after.i);
+                if (edited) {
+                    homeRows.set(edited.i, {
+                        tabUuid: tiles.find((tile) => tile.uuid === edited.i)
+                            ?.tabUuid,
+                        y: edited.y,
+                    });
+                }
+                void handleUpdateTiles(layoutToSave);
+                return;
+            }
+            if (
+                !matchesSavedLayout(
+                    convertLayoutToBaseCoordinates(layout, gridScale),
+                    previous,
+                )
+            ) {
+                setGridRedraw({
+                    tileUuid: after.i,
+                    layouts: { lg: layout, md: layout, sm: layout, xs: layout },
+                });
+                requestAnimationFrame(() => setGridRedraw(null));
             }
         },
-        [handleUpdateTilesWithScaling, stopAutoScroll],
+        [dashboardTiles, gridScale, handleUpdateTiles, stopAutoScroll],
     );
     const handleResizeStart = useCallback(() => {
         setIsInteracting(true);
@@ -538,15 +588,28 @@ const DashboardTabs: FC<DashboardTabsProps> = ({
     const layoutsByTab = useMemo(() => {
         const map = new Map<string, DashboardLayouts>();
         for (const [tabUuid, tiles] of tilesByTab) {
-            map.set(tabUuid, getDashboardLayouts(tiles, isEditMode, gridScale));
+            map.set(
+                tabUuid,
+                gridRedraw &&
+                    tiles.some((tile) => tile.uuid === gridRedraw.tileUuid)
+                    ? gridRedraw.layouts
+                    : getDashboardLayouts(tiles, isEditMode, gridScale),
+            );
         }
         return map;
-    }, [tilesByTab, isEditMode, gridScale]);
+    }, [tilesByTab, isEditMode, gridScale, gridRedraw]);
 
     // Layouts for non-tabbed dashboards (single grid with all tiles)
     const allTilesLayouts = useMemo(
-        () => getDashboardLayouts(visibleTiles ?? [], isEditMode, gridScale),
-        [visibleTiles, isEditMode, gridScale],
+        () =>
+            gridRedraw && !tabsEnabled
+                ? gridRedraw.layouts
+                : getDashboardLayouts(
+                      visibleTiles ?? [],
+                      isEditMode,
+                      gridScale,
+                  ),
+        [visibleTiles, isEditMode, gridScale, gridRedraw, tabsEnabled],
     );
 
     const gridLineStyles = useGridStyles({
